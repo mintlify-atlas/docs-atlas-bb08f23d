@@ -1,0 +1,141 @@
+{
+  "projectType": "cli-tool",
+  "projectName": "ScryxCLI",
+  "projectDescription": "AI-powered CLI for detecting and fixing code errors with an interactive terminal interface.",
+  "theme": "aspen",
+  "primaryColor": "#8B5CF6",
+  "lightColor": "#A78BFA",
+  "darkColor": "#6D28D9",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/overview",
+              "concepts/ai-models",
+              "concepts/file-operations"
+            ]
+          },
+          {
+            "group": "Commands",
+            "pages": [
+              "commands/overview",
+              "commands/chat",
+              "commands/model",
+              "commands/path",
+              "commands/apikey",
+              "commands/help",
+              "commands/logout",
+              "commands/report",
+              "commands/exit"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/setup",
+              "configuration/api-keys",
+              "configuration/models"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/analyzing-code",
+              "guides/fixing-errors",
+              "guides/file-management",
+              "guides/authentication"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "advanced/architecture",
+              "advanced/hooks",
+              "advanced/tools-system"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Configuration API",
+            "pages": [
+              "api/config/get-config",
+              "api/config/set-config",
+              "api/config/delete-config"
+            ]
+          },
+          {
+            "group": "File Operations",
+            "pages": [
+              "api/tools/read-file",
+              "api/tools/write-file",
+              "api/tools/create-file",
+              "api/tools/delete-file",
+              "api/tools/get-file-tree"
+            ]
+          },
+          {
+            "group": "Hooks",
+            "pages": [
+              "api/hooks/use-chat",
+              "api/hooks/use-tool-executor"
+            ]
+          },
+          {
+            "group": "Authentication",
+            "pages": [
+              "api/auth/is-authenticated",
+              "api/auth/model-selection"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "AI-powered code error detection and fixing",
+    "Interactive terminal UI built with React and Ink",
+    "Multiple AI model support (OpenRouter, Google GenAI, OpenAI)",
+    "Comprehensive file operations (read, write, create, delete)",
+    "Natural language command processing",
+    "Authentication and configuration management",
+    "Real-time streaming responses",
+    "Project file tree visualization"
+  ],
+  "publicApiSurface": [
+    "getConfig() - Retrieve CLI configuration",
+    "setConfig(key, value) - Update configuration",
+    "deleteConfig(key) - Remove configuration",
+    "readFile(path) - Read file contents",
+    "writeFile(path, content) - Write to file",
+    "createFile(path, content) - Create new file",
+    "deleteFile(path) - Delete file",
+    "getFileTree(dir) - Get project structure",
+    "useChat() - Chat hook for AI interactions",
+    "useToolExecutor() - Hook for tool execution",
+    "isAuthenticated() - Check auth status",
+    "isModelSelected() - Check model selection",
+    "/model - Select AI model command",
+    "/help - Display help command",
+    "/path - Set working path command",
+    "/apikey - Configure API key command",
+    "/logout - Logout command",
+    "/report - Report issue command",
+    "/exit - Exit CLI command"
+  ]
+}
