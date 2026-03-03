@@ -1,0 +1,120 @@
+---
+title: Introduction to ScryxCLI
+description: AI-powered CLI tool for detecting and fixing code errors with a beautiful terminal interface
+---
+
+# Welcome to ScryxCLI
+
+ScryxCLI is an AI-powered command-line interface that brings intelligent code analysis and manipulation directly to your terminal. Built with React and Ink, it provides a modern, interactive experience for developers who want to leverage AI for code operations without leaving their workflow.
+
+## What is ScryxCLI?
+
+ScryxCLI is designed as "Cursor for Terminal" - a natural language interface for your codebase. Instead of manually editing files, you can describe what you want in plain English, and the AI engine will generate the appropriate file operations.
+
+<CardGroup cols={2}>
+  <Card title="Natural language commands" icon="message">
+    Ask questions or give instructions in plain English. ScryxCLI understands your intent and translates it into file operations.
+  </Card>
+  
+  <Card title="Beautiful terminal UI" icon="window">
+    Built with React and Ink for a modern CLI experience with interactive prompts, spinners, and real-time feedback.
+  </Card>
+  
+  <Card title="Multiple AI providers" icon="brain">
+    Choose from OpenAI, Mistral, Qwen, ArceeAI, StepFun, and Zai models to power your code operations.
+  </Card>
+  
+  <Card title="File operations" icon="file">
+    Create, read, update, and delete files using natural language commands powered by AI.
+  </Card>
+</CardGroup>
+
+## Key features
+
+### AI-powered file operations
+
+ScryxCLI's AI engine interprets your natural language commands and executes structured file operations:
+
+- **Create files** - Generate new files with complete, functional code
+- **Read files** - Query file contents and get explanations
+- **Update files** - Modify existing code with natural language instructions
+- **Delete files** - Remove files from your project
+
+### Interactive terminal experience
+
+The CLI provides a rich interactive experience with:
+
+- Real-time AI responses with loading indicators
+- Command history and autocomplete
+- Beautiful formatted output with syntax highlighting
+- Built-in commands for configuration and help
+
+### Multiple AI model support
+
+ScryxCLI integrates with multiple AI providers through OpenRouter, giving you access to:
+
+- OpenAI GPT-OSS models (120B and 20B)
+- ArceeAI Trinity (Large and Mini)
+- Mistral Small 3.1 24B
+- Qwen3 Coder and Next models
+- StepFun Step 3.5 Flash
+- Zai GLM 4.5 Air
+
+<Note>
+  All AI models are accessed through OpenRouter with free tier options available for getting started.
+</Note>
+
+## How it works
+
+ScryxCLI uses a structured approach to process your commands:
+
+<Steps>
+  <Step title="Authentication">
+    Sign in through the web interface at https://www.scrycli.tech/token to get your authentication token.
+  </Step>
+  
+  <Step title="Model selection">
+    Choose your preferred AI provider and model from the interactive menu.
+  </Step>
+  
+  <Step title="Natural language input">
+    Type your request in plain English, like "create a React component" or "fix the bug in app.js".
+  </Step>
+  
+  <Step title="AI processing">
+    The AI engine analyzes your request and generates structured JSON instructions with file paths and content.
+  </Step>
+  
+  <Step title="Execution">
+    ScryxCLI executes the file operations and provides feedback on the results.
+  </Step>
+</Steps>
+
+## Built-in commands
+
+ScryxCLI includes several slash commands for configuration and utilities:
+
+- `/help` - Display available commands
+- `/model` - Change AI model selection
+- `/path` - Change working directory
+- `/logout` - Sign out of your account
+- `/report` - Report bugs or issues
+- `/exit` - Exit the application
+
+<Tip>
+  Press `Esc` at any time to return from a command to the main interface.
+</Tip>
+
+## Technology stack
+
+ScryxCLI is built with modern technologies:
+
+- **React** - Component-based UI architecture
+- **Ink** - React renderer for interactive CLI applications
+- **TypeScript** - Type-safe development
+- **OpenRouter SDK** - Multi-provider AI access
+- **Commander** - CLI argument parsing
+
+## What's next?
+
+Ready to get started? Check out the [installation guide](/installation) to set up ScryxCLI, then follow the [quickstart tutorial](/quickstart) to run your first AI-powered command.

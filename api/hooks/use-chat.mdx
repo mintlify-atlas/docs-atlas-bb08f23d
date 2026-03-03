@@ -1,0 +1,114 @@
+---
+title: 'useChat'
+description: 'React hook for managing chat interactions with the LLM'
+---
+
+## Overview
+
+The `useChat` hook provides a simple interface for sending prompts to the language model and managing the response state. It handles loading states, error handling, and provides both streaming and final answer states.
+
+## Import
+
+```typescript
+import { useChat } from 'scryx-cli/hooks';
+```
+
+## Usage
+
+```typescript
+import { useChat } from 'scryx-cli/hooks';
+
+function ChatComponent() {
+  const { answer, finalAnswer, loading, error, send, setFinalAnswer } = useChat();
+
+  const handleSubmit = async (prompt: string) => {
+    await send(prompt);
+  };
+
+  return (
+    <div>
+      {loading && <div>Loading...</div>}
+      {error && <div>Error: {error}</div>}
+      {answer && <div>{answer}</div>}
+    </div>
+  );
+}
+```
+
+## Return Value
+
+The hook returns an object with the following properties:
+
+<ResponseField name="answer" type="string">
+  The current answer from the LLM. This value is set when the LLM call completes successfully.
+</ResponseField>
+
+<ResponseField name="finalAnswer" type="string">
+  The final answer state. This is set to the same value as `answer` after a successful LLM call, but can be modified independently using `setFinalAnswer()`.
+</ResponseField>
+
+<ResponseField name="loading" type="boolean">
+  Indicates whether an LLM call is currently in progress. Set to `true` when `send()` is called and `false` when the call completes or fails.
+</ResponseField>
+
+<ResponseField name="error" type="string">
+  Error message if the LLM call fails. Empty string when there is no error. Contains the error message from the exception or "Something went wrong." as a fallback.
+</ResponseField>
+
+<ResponseField name="send" type="(prompt: string) => Promise<void>">
+  Async function to send a prompt to the LLM. Automatically manages loading state, error handling, and updates both `answer` and `finalAnswer` on success.
+  
+  **Parameters:**
+  - `prompt` (string): The user prompt to send to the language model
+  
+  **Behavior:**
+  - Clears previous `answer` and `error` states
+  - Sets `loading` to `true`
+  - Calls the LLM with the prompt and system prompt from config
+  - Updates `answer` and `finalAnswer` with the response
+  - Sets `error` if the call fails
+  - Sets `loading` to `false` when complete
+</ResponseField>
+
+<ResponseField name="setFinalAnswer" type="(value: string) => void">
+  State setter function to manually update the `finalAnswer` value. Useful for modifying the final answer independently of the LLM response.
+  
+  **Parameters:**
+  - `value` (string): The new value for `finalAnswer`
+</ResponseField>
+
+## Error Handling
+
+The hook automatically catches errors during LLM calls and sets the `error` state:
+
+```typescript
+const { error, send } = useChat();
+
+await send("Hello");
+
+if (error) {
+  // Handle error - error contains the error message
+  console.error(error);
+}
+```
+
+Error messages come from the caught exception's `message` property, with a fallback to "Something went wrong." if no message is available.
+
+## State Management
+
+The hook uses React's `useState` internally to manage:
+
+- `answer`: Reset to empty string before each `send()` call
+- `finalAnswer`: Set to the LLM response after successful completion
+- `loading`: `true` during LLM call, `false` otherwise
+- `error`: Reset to empty string before each `send()` call, set on failure
+
+## Implementation Details
+
+The hook integrates with:
+
+- `getConfig()` from `config/configManage.js` to retrieve configuration
+- `llmCall()` from `model/openRouter.js` for LLM communication
+- `systemPrompt` from `model/systemPrompt.js` for system-level instructions
+
+Source: `/workspace/source/src/hooks/useChat.ts:6`

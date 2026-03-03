@@ -1,0 +1,170 @@
+---
+title: 'useToolExecutor'
+description: 'React hook for executing tool actions based on LLM responses'
+---
+
+## Overview
+
+The `useToolExecutor` hook automatically parses LLM responses and executes file system operations when the response contains valid tool instructions in JSON format. It processes actions like creating, reading, writing, and deleting files.
+
+## Import
+
+```typescript
+import { useToolExecutor } from 'scryx-cli/hooks';
+```
+
+## Usage
+
+```typescript
+import { useChat } from 'scryx-cli/hooks';
+import { useToolExecutor } from 'scryx-cli/hooks';
+
+function ChatWithTools() {
+  const { answer, loading, send } = useChat();
+  const result = useToolExecutor(answer, loading);
+
+  const handleSubmit = async () => {
+    // Send a prompt that might result in tool execution
+    await send("Create a new file called example.txt with content 'Hello World'");
+    // useToolExecutor will automatically parse and execute the tool action
+  };
+
+  return (
+    <div>
+      {/* Your UI */}
+    </div>
+  );
+}
+```
+
+## Parameters
+
+<ParamField path="answer" type="string" required>
+  The LLM response to parse for tool instructions. Typically comes from the `useChat` hook's `answer` state.
+  
+  The hook expects JSON-formatted instructions in the format:
+  ```json
+  {
+    "action": "create_file" | "read_file" | "write_file" | "delete_file",
+    "file": "path/to/file",
+    "content": "file content" // Required for create_file and write_file
+  }
+  ```
+</ParamField>
+
+<ParamField path="loading" type="boolean" required>
+  Loading state from the chat hook. The tool executor only processes actions when `loading` is `false`, ensuring the LLM response is complete.
+</ParamField>
+
+## Return Value
+
+<ResponseField name="result" type="string">
+  Currently returns an empty string. This value is maintained for future extensibility to return execution results or status information.
+</ResponseField>
+
+## Supported Actions
+
+The hook supports the following file system actions:
+
+### create_file
+
+Creates a new file with the specified content.
+
+```json
+{
+  "action": "create_file",
+  "file": "path/to/newfile.txt",
+  "content": "File contents here"
+}
+```
+
+### read_file
+
+Reads and logs the contents of a file to the console.
+
+```json
+{
+  "action": "read_file",
+  "file": "path/to/file.txt"
+}
+```
+
+### write_file
+
+Writes content to an existing file (overwrites existing content).
+
+```json
+{
+  "action": "write_file",
+  "file": "path/to/file.txt",
+  "content": "New content"
+}
+```
+
+### delete_file
+
+Deletes the specified file.
+
+```json
+{
+  "action": "delete_file",
+  "file": "path/to/file.txt"
+}
+```
+
+## Behavior
+
+The hook uses a `useEffect` that:
+
+1. **Waits for completion**: Returns early if `loading` is `true`
+2. **Cleans the response**: Removes code block markers (backticks) and trims whitespace
+3. **Validates JSON**: Checks if the cleaned response starts with `{` and ends with `}`
+4. **Parses instructions**: Attempts to parse the cleaned response as JSON
+5. **Validates action**: Ensures the parsed object has an `action` property
+6. **Executes tool**: Calls the appropriate file system function based on the action
+7. **Error handling**: Catches and logs parsing or execution errors to the console
+
+## Error Handling
+
+Errors during tool execution are caught and logged to the console:
+
+```typescript
+try {
+  // Parse and execute tool
+} catch (e: any) {
+  console.error(`Error executing tool: ${e.message}`);
+}
+```
+
+The hook gracefully handles:
+- Invalid JSON in the response
+- Missing required fields (`action`, `file`, `content`)
+- File system operation failures
+- Responses that don't contain tool instructions
+
+## Integration with useChat
+
+Typical usage pattern with `useChat`:
+
+```typescript
+function App() {
+  const { answer, loading, send } = useChat();
+  const toolResult = useToolExecutor(answer, loading);
+
+  // The tool executor automatically processes valid tool instructions
+  // from the LLM response when loading completes
+}
+```
+
+## Implementation Details
+
+The hook integrates with file system utilities:
+
+- `createFile()` from `tools/createFile.js`
+- `readFile()` from `tools/readFile.js`
+- `writeFile()` from `tools/writeFile.js`
+- `deleteFile()` from `tools/deleteFile.js`
+
+Dependencies: The effect re-runs when `loading` or `answer` changes.
+
+Source: `/workspace/source/src/hooks/useToolExecutor.ts:8`

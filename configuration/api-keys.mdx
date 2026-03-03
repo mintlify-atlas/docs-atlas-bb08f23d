@@ -1,0 +1,232 @@
+---
+title: API Keys Configuration
+description: Configure API keys for different AI providers in ScryxCLI
+---
+
+## Overview
+
+ScryxCLI requires an API key to communicate with AI model providers. The API key is stored securely in your local configuration file and is used to authenticate requests to the selected provider.
+
+<Note>
+  ScryxCLI currently uses OpenRouter as its model provider, which supports multiple AI providers through a unified API.
+</Note>
+
+## Setting Your API Key
+
+### Using the CLI Command
+
+The easiest way to configure your API key is through the interactive CLI:
+
+<Steps>
+  <Step title="Launch the API key command">
+    While ScryxCLI is running, type:
+    
+    ```bash
+    /apikey
+    ```
+  </Step>
+  
+  <Step title="Select your provider">
+    Choose from the available providers:
+    - OpenAI
+    - StepFun
+    - Qwen
+    - ArceeAI
+    - Mistral
+    - Zai
+  </Step>
+  
+  <Step title="Choose your model">
+    Select the specific model you want to use from the provider's available models.
+  </Step>
+</Steps>
+
+<Note>
+  The `/apikey` command currently routes to model selection. The API key must be set manually in the configuration file.
+</Note>
+
+### Manual Configuration
+
+You can manually add your API key to the configuration file:
+
+<Steps>
+  <Step title="Open the config file">
+    ```bash
+    nano ~/.scrycli/config.json
+    ```
+  </Step>
+  
+  <Step title="Add or update the model.modelKey field">
+    ```json
+    {
+      "user": {
+        "token": "your-auth-token",
+        "userId": "your-user-id"
+      },
+      "model": {
+        "modelProvider": "openai",
+        "modelName": "openai/gpt-oss-120b:free",
+        "modelKey": "sk-or-v1-your-openrouter-api-key-here"
+      }
+    }
+    ```
+  </Step>
+  
+  <Step title="Save and restart ScryxCLI">
+    Your API key will be loaded on the next run.
+  </Step>
+</Steps>
+
+## Obtaining API Keys
+
+### OpenRouter API Key
+
+ScryxCLI uses OpenRouter to access multiple AI providers:
+
+<Steps>
+  <Step title="Visit OpenRouter">
+    Go to [OpenRouter](https://openrouter.ai/)
+  </Step>
+  
+  <Step title="Create an account">
+    Sign up for a free account
+  </Step>
+  
+  <Step title="Generate API key">
+    Navigate to Settings > API Keys and create a new key
+  </Step>
+  
+  <Step title="Copy the key">
+    Your key will start with `sk-or-v1-`
+  </Step>
+</Steps>
+
+<Note>
+  OpenRouter provides access to many free models with rate limits. Some premium models require credits.
+</Note>
+
+## Configuration Structure
+
+The API key is stored in the `model` object of your configuration:
+
+```json
+{
+  "model": {
+    "modelProvider": "openai",
+    "modelName": "openai/gpt-oss-120b:free",
+    "modelKey": "your-api-key"
+  }
+}
+```
+
+### Required Fields
+
+| Field | Description | Example |
+|-------|-------------|----------|
+| `modelProvider` | The AI provider name | `"openai"`, `"qwen"`, `"mistral"` |
+| `modelName` | Full model identifier | `"openai/gpt-oss-120b:free"` |
+| `modelKey` | Your API key | `"sk-or-v1-..."` |
+
+## Validation
+
+ScryxCLI validates your API key configuration before allowing model interactions:
+
+```typescript
+// From src/lib/isModelSelected.ts
+if (!config?.model?.modelName) return false;
+if (!config?.model?.modelKey) return false;
+return config.model.modelName !== '' && config.model.modelKey !== '';
+```
+
+Both `modelName` and `modelKey` must be present and non-empty.
+
+## Security Best Practices
+
+<Warning>
+  Your API key is stored in plain text in `~/.scrycli/config.json`. Protect this file with appropriate permissions.
+</Warning>
+
+### Recommended Permissions
+
+Set restrictive permissions on your config file:
+
+```bash
+chmod 600 ~/.scrycli/config.json
+```
+
+This ensures only you can read and write the configuration.
+
+### What NOT to Do
+
+- Don't commit `config.json` to version control
+- Don't share your API key in public forums
+- Don't use production API keys for testing
+- Don't store API keys in environment variables that might be logged
+
+## Troubleshooting
+
+### "Model not selected" Error
+
+If you see this error, check:
+
+1. **API key is set**
+   ```bash
+   cat ~/.scrycli/config.json | grep modelKey
+   ```
+
+2. **Model name is configured**
+   ```bash
+   cat ~/.scrycli/config.json | grep modelName
+   ```
+
+3. **Both fields are non-empty strings**
+
+### Invalid API Key
+
+If your requests fail with authentication errors:
+
+<Steps>
+  <Step title="Verify key format">
+    OpenRouter keys start with `sk-or-v1-`
+  </Step>
+  
+  <Step title="Check for whitespace">
+    Ensure no extra spaces before or after the key
+  </Step>
+  
+  <Step title="Regenerate if needed">
+    Create a new key in your OpenRouter dashboard
+  </Step>
+</Steps>
+
+## Usage in Code
+
+The API key is used when making model calls:
+
+```typescript
+// From src/model/openRouter.ts
+const openRouterClient = new OpenRouter({
+  apiKey: '', // Currently hardcoded, should use getConfig().model.modelKey
+});
+
+const result = openRouterClient.callModel({
+  model: `${getConfig().model.modelName}`,
+  instructions: systemPrompt,
+  input: prompt
+});
+```
+
+<Note>
+  The current implementation has the API key hardcoded. You may need to update the code to use `getConfig().model.modelKey` for proper functionality.
+</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Model Configuration" icon="brain" href="/configuration/models">
+    Learn about available models and selection
+  </Card>
+  <Card title="Configuration Setup" icon="gear" href="/configuration/setup">
+    Understand the full configuration system
+  </Card>
+</CardGroup>

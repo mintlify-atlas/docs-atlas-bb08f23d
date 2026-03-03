@@ -1,0 +1,129 @@
+---
+title: 'isModelSelected()'
+description: 'Verify that a model has been properly configured in ScryxCLI'
+---
+
+## Overview
+
+The `isModelSelected()` function checks whether a valid model configuration exists in the ScryxCLI settings. It ensures both the model name and API key are present and non-empty.
+
+## Function Signature
+
+```typescript
+const isModelSelected = (): boolean
+```
+
+## Return Value
+
+<ResponseField name="isModelSelected" type="boolean" required>
+  Returns `true` if a valid model configuration exists, `false` otherwise.
+</ResponseField>
+
+## How It Works
+
+The function performs the following validation checks:
+
+1. **Retrieves Configuration**: Loads the ScryxCLI configuration using `getConfig()`
+2. **Model Name Check**: Verifies `config.model.modelName` exists
+3. **Model Key Check**: Verifies `config.model.modelKey` exists
+4. **Non-Empty Validation**: Ensures both values are non-empty strings
+
+<Note>
+  The function returns `false` if any validation check fails or if an error occurs during execution.
+</Note>
+
+## Valid Model Configuration
+
+For a model to be considered properly selected, all of the following must be true:
+
+- Configuration contains `config.model.modelName`
+- Configuration contains `config.model.modelKey`
+- `modelName` is a non-empty string (`!== ''`)
+- `modelKey` is a non-empty string (`!== ''`)
+
+## Implementation Details
+
+```typescript
+const isModelSelected = (): boolean => {
+  try {
+    const config = getConfig();
+    if (!config?.model?.modelName) return false;
+    if (!config?.model?.modelKey) return false;
+    return config.model.modelName !== '' && config.model.modelKey !== '';
+  } catch (error) {
+    console.error(error);
+    return false;
+  }
+};
+```
+
+## Usage Example
+
+```typescript
+import isModelSelected from './lib/isModelSelected.js';
+
+if (isModelSelected()) {
+  console.log('Model is configured and ready to use');
+  // Proceed with model operations
+} else {
+  console.log('No model selected');
+  // Prompt user to select a model
+}
+```
+
+## Combining with Authentication
+
+```typescript
+import isAuthenticated from './lib/auth.js';
+import isModelSelected from './lib/isModelSelected.js';
+
+function canPerformOperation(): boolean {
+  if (!isAuthenticated()) {
+    console.error('User must be authenticated');
+    return false;
+  }
+  
+  if (!isModelSelected()) {
+    console.error('Model must be configured');
+    return false;
+  }
+  
+  return true;
+}
+```
+
+## Error Handling
+
+The function includes comprehensive error handling:
+
+- **Missing Configuration**: Returns `false` if config cannot be retrieved
+- **Missing Model Name**: Returns `false` if `modelName` is undefined or null
+- **Missing Model Key**: Returns `false` if `modelKey` is undefined or null
+- **Empty Strings**: Returns `false` if either field is an empty string
+- **Exceptions**: Logs errors to console and returns `false`
+
+<Info>
+  Unlike `isAuthenticated()`, this function logs errors to the console before returning `false`, which can help with debugging model configuration issues.
+</Info>
+
+## Configuration Structure
+
+The function expects the following structure in the ScryxCLI configuration:
+
+```typescript
+interface Config {
+  model?: {
+    modelName: string;
+    modelKey: string;
+  };
+}
+```
+
+## Related Functions
+
+- `getConfig()` - Retrieves the ScryxCLI configuration
+- `isAuthenticated()` - Checks if user has valid JWT token
+
+## Source Location
+
+`src/lib/isModelSelected.ts:6`

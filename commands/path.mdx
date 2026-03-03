@@ -1,0 +1,66 @@
+---
+title: /path Command
+description: Change the working directory for ScryxCLI
+---
+
+The `/path` command allows you to change the current working directory that ScryxCLI operates in.
+
+## Usage
+
+```bash
+/path
+```
+
+## Overview
+
+The working directory determines which codebase or project ScryxCLI analyzes when you ask questions or request assistance. Changing the path allows you to switch between different projects.
+
+## Current Directory Display
+
+The current working directory is always displayed above the input prompt:
+
+```bash
+/home/user/my-project
+> Ask anything about your codebase...
+```
+
+## When to Use /path
+
+Use the `/path` command when you want to:
+
+- Switch to a different project or codebase
+- Change to a subdirectory within your current project
+- Navigate to a different location in your filesystem
+
+## Navigation
+
+- **Esc**: Cancel and return to chat
+
+<Note>
+  The `/path` command interface provides a way to change directories. The current implementation displays the command help menu.
+</Note>
+
+## Default Behavior
+
+When ScryxCLI starts, it uses the directory from which the CLI was launched as the initial working directory.
+
+```bash
+cd /path/to/my-project
+scrycli
+# Working directory will be /path/to/my-project
+```
+
+## Example
+
+```bash
+> /path
+[Esc] to go back
+
+/help - Show help
+/path - change directory
+/model - Select a model
+/apikey - Set API key
+/logout - Logout
+/Report - Report a bug
+/exit - Exit
+```

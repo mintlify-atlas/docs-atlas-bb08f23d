@@ -1,0 +1,120 @@
+---
+title: 'deleteConfig()'
+description: 'Delete a configuration key from the ScryxCLI configuration'
+---
+
+## Function Signature
+
+```typescript
+export const deleteConfig = (key: string) => void
+```
+
+## Description
+
+Deletes a configuration key and its associated value from the ScryxCLI configuration file. This function removes the specified key from the configuration object and persists the changes to `~/.scrycli/config.json`. The updated configuration is written with pretty-printing (2-space indentation).
+
+## Parameters
+
+<ParamField path="key" type="string" required>
+  The configuration key to delete. If the key doesn't exist, the operation completes silently without error.
+</ParamField>
+
+## Usage
+
+```typescript
+import { deleteConfig } from '@scryxcli/config';
+
+deleteConfig('apiKey');
+deleteConfig('theme');
+```
+
+## Examples
+
+### Delete Single Configuration Key
+
+```typescript
+import { deleteConfig } from '@scryxcli/config';
+
+deleteConfig('apiKey');
+```
+
+### Delete Multiple Configuration Keys
+
+```typescript
+import { deleteConfig } from '@scryxcli/config';
+
+deleteConfig('apiKey');
+deleteConfig('apiSecret');
+deleteConfig('refreshToken');
+```
+
+### Conditional Deletion
+
+```typescript
+import { getConfig, deleteConfig } from '@scryxcli/config';
+
+const config = getConfig();
+
+if (config.temporaryToken) {
+  console.log('Removing temporary token...');
+  deleteConfig('temporaryToken');
+}
+```
+
+### Reset Specific Configuration
+
+```typescript
+import { deleteConfig, setConfig } from '@scryxcli/config';
+
+// Remove old configuration
+deleteConfig('legacyApiKey');
+
+// Set new configuration
+setConfig('apiKey', 'new-key-value');
+```
+
+### Clear Multiple Related Keys
+
+```typescript
+import { deleteConfig } from '@scryxcli/config';
+
+function clearAuthConfig() {
+  deleteConfig('apiKey');
+  deleteConfig('apiSecret');
+  deleteConfig('accessToken');
+  deleteConfig('refreshToken');
+  console.log('Authentication configuration cleared');
+}
+
+clearAuthConfig();
+```
+
+### Safe Deletion with Verification
+
+```typescript
+import { getConfig, deleteConfig } from '@scryxcli/config';
+
+const key = 'apiKey';
+const configBefore = getConfig();
+
+if (key in configBefore) {
+  deleteConfig(key);
+  console.log(`Deleted configuration key: ${key}`);
+} else {
+  console.log(`Key ${key} not found in configuration`);
+}
+```
+
+## Error Conditions
+
+- If the configuration file cannot be read, a filesystem error will be thrown
+- If the configuration file cannot be written after deletion, a filesystem error will be thrown
+- If the configuration file contains invalid JSON, a `SyntaxError` will be thrown
+
+## Notes
+
+- If the specified key doesn't exist, the function completes successfully without error
+- Uses JavaScript's `delete` operator to remove the key from the configuration object
+- The configuration file is formatted with 2-space indentation for readability
+- This function performs synchronous file I/O operations
+- After deletion, the key will no longer exist in the configuration object (not set to `null` or `undefined`)

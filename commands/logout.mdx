@@ -1,0 +1,112 @@
+---
+title: /logout Command
+description: Logout and clear ScryxCLI configuration
+---
+
+The `/logout` command allows you to logout from ScryxCLI and clear your stored configuration.
+
+## Usage
+
+```bash
+/logout
+```
+
+## What It Does
+
+The logout command:
+- Prompts for confirmation before logging out
+- Removes user configuration from `~/.scrycli/config.json`
+- Removes model configuration from `~/.scrycli/config.json`
+- Exits the application after successful logout
+
+## How It Works
+
+<Steps>
+  <Step title="Enter the command">
+    Type `/logout` and press `Enter`.
+  </Step>
+  
+  <Step title="Confirm logout">
+    You'll see a confirmation prompt:
+    
+    ```
+    ┌──────────────────────────────────────────────────────┐
+    │ Are you sure you want to logout? Select and Press    │
+    │ [Enter]                                              │
+    └──────────────────────────────────────────────────────┘
+    
+    > Yes
+      No
+    ```
+  </Step>
+  
+  <Step title="Select your choice">
+    Use arrow keys to select:
+    - **Yes**: Logout and clear configuration
+    - **No**: Cancel and stay logged in
+    
+    Press `Enter` to confirm.
+  </Step>
+  
+  <Step title="Result">
+    **If you selected Yes:**
+    ```
+    ✅ You've been logged out successfully.
+    ```
+    
+    The application exits after 1 second.
+    
+    **If you selected No:**
+    ```
+    🙌 Great, you're still with us!
+    ```
+  </Step>
+</Steps>
+
+## What Gets Deleted
+
+When you logout, the following data is removed from `~/.scrycli/config.json`:
+
+- **User configuration**: Authentication and user settings
+- **Model configuration**: Selected AI model and provider
+
+<Warning>
+  Logout is permanent and cannot be undone. You'll need to reconfigure your settings (model selection, API keys, etc.) the next time you use ScryxCLI.
+</Warning>
+
+## Navigation
+
+- **Arrow keys**: Navigate between Yes/No options
+- **Enter**: Confirm your selection
+- **Esc**: Cancel and return to chat (before making a selection)
+
+## Example Flow
+
+```bash
+> /logout
+[Esc] to go back
+
+Are you sure you want to logout? Select and Press [Enter]
+
+> Yes
+  No
+
+# After selecting Yes:
+✅ You've been logged out successfully.
+# Application exits
+```
+
+## When to Use
+
+Use `/logout` when you want to:
+- Clear all configuration and start fresh
+- Switch to a different user account
+- Remove stored credentials from your machine
+- Reset ScryxCLI to initial state
+
+## After Logout
+
+When you restart ScryxCLI after logging out:
+- You'll need to select a model again using `/model`
+- You'll need to reconfigure any API keys using `/apikey`
+- All settings will be at their defaults

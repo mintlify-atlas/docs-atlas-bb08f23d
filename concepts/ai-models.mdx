@@ -1,0 +1,244 @@
+---
+title: 'AI Models'
+description: 'Supported AI models, configuration, and model selection in ScryxCLI'
+---
+
+ScryxCLI supports multiple AI model providers through OpenRouter, offering a range of free models optimized for code generation and understanding.
+
+## Supported Providers
+
+ScryxCLI integrates with the following AI providers via OpenRouter:
+
+<Tabs>
+  <Tab title="OpenAI">
+    OpenAI models available through OpenRouter:
+    
+    - **gpt-oss-120b** (Recommended) - `openai/gpt-oss-120b:free`
+    - **gpt-oss-20b** - `openai/gpt-oss-20b:free`
+  </Tab>
+  
+  <Tab title="Qwen">
+    Alibaba's Qwen coding models:
+    
+    - **Qwen3 Next 80B A3B Instruct** (Recommended) - `qwen/qwen3-next-80b-a3b-instruct:free`
+    - **Qwen3 Coder 480B A35B** - `qwen/qwen3-coder:free`
+  </Tab>
+  
+  <Tab title="ArceeAI">
+    ArceeAI Trinity models:
+    
+    - **Trinity Large** (Recommended) - `arcee-ai/trinity-large-preview:free`
+    - **Trinity Mini** - `arcee-ai/trinity-mini:free`
+  </Tab>
+  
+  <Tab title="Mistral">
+    Mistral AI models:
+    
+    - **Mistral Small 3.1 24B** - `mistralai/mistral-small-3.1-24b-instruct:free`
+  </Tab>
+  
+  <Tab title="StepFun">
+    StepFun models:
+    
+    - **Step 3.5 Flash** - `stepfun/step-3.5-flash:free`
+  </Tab>
+  
+  <Tab title="Z-AI">
+    Z-AI GLM models:
+    
+    - **GLM 4.5 Air** - `z-ai/glm-4.5-air:free`
+  </Tab>
+</Tabs>
+
+## Model Selection
+
+On first launch, ScryxCLI prompts you to select a provider and model through an interactive menu.
+
+### Selection Flow
+
+```typescript
+const providers = [
+  { label: "OpenAI", value: "openai" },
+  { label: "StepFun ", value: "stepfun" },
+  { label: "Qwen", value: "qwen" },
+  { label: "ArceeAI", value: "arceeai" },
+  { label: "Mistral", value: "mistral" },
+  { label: "Zai", value: "zai" },
+];
+
+const modelsMap: Record<string, any[]> = {
+  openai: [
+    { label: "gpt-oss-120b (Recommended)", value: "openai/gpt-oss-120b:free" },
+    { label: "gpt-oss-20b", value: "openai/gpt-oss-20b:free" },
+  ],
+  // ... other providers
+};
+```
+
+The `SelectModel` component handles the interactive selection:
+
+```tsx
+const SelectModel = (props: selectModelType) => {
+  const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
+  const [selectedModel, setSelectedModel] = useState<string | null>(null);
+
+  return (
+    <Box>
+      {!selectedProvider && (
+        <SelectInput
+          items={providers}
+          onSelect={(item) => setSelectedProvider(item.value)}
+        />
+      )}
+
+      {selectedProvider && !selectedModel && (
+        <SelectInput
+          items={modelsMap[selectedProvider] || []}
+          onSelect={(item) => {
+            setSelectedModel(item.value as string);
+            setConfig('model', { 
+              modelProvider: selectedProvider, 
+              modelName: item.value 
+            });
+          }}
+        />
+      )}
+    </Box>
+  );
+}
+```
+
+<Note>
+Your model selection is saved to `~/.scrycli/config.json` and persists across sessions.
+</Note>
+
+## Model Validation
+
+Before allowing chat interaction, ScryxCLI validates that a model is properly configured:
+
+```typescript
+const isModelSelected = (): boolean => {
+  try {
+    const config = getConfig();
+    if (!config?.model?.modelName) return false;
+    if (!config?.model?.modelKey) return false;
+    return config.model.modelName !== '' && config.model.modelKey !== '';
+  } catch(error) {
+    console.error(error);
+    return false;
+  }
+};
+```
+
+The validation checks for:
+- `model.modelName` - The full model identifier (e.g., `openai/gpt-oss-120b:free`)
+- `model.modelKey` - API key for authentication
+
+<Warning>
+Both `modelName` and `modelKey` must be present and non-empty for the chat interface to activate.
+</Warning>
+
+## OpenRouter Integration
+
+ScryxCLI uses the OpenRouter SDK to communicate with all AI models:
+
+```typescript
+import { OpenRouter } from '@openrouter/sdk';
+
+const openRouterClient = new OpenRouter({
+  apiKey: '',
+});
+
+export async function llmCall({
+  prompt,
+  systemPrompt,
+}: llmCallParams): Promise<string> {
+  const result = openRouterClient.callModel({
+    model: `${getConfig().model.modelName}`,
+    instructions: `${systemPrompt}`,
+    input: `${prompt} \n\nFile Tree: ${fileTreeString}`,
+  });
+  const text = await result.getText();
+  return text;
+}
+```
+
+### Why OpenRouter?
+
+OpenRouter provides:
+- **Unified API** - Single interface for multiple AI providers
+- **Free Tier Models** - Access to powerful models at no cost
+- **Fallback Support** - Automatic routing if a model is unavailable
+- **Usage Tracking** - Monitor API consumption across providers
+
+## Configuration Storage
+
+Model configuration is stored in the user's home directory:
+
+```json
+{
+  "model": {
+    "modelProvider": "openai",
+    "modelName": "openai/gpt-oss-120b:free",
+    "modelKey": "your-api-key-here"
+  }
+}
+```
+
+<Info>
+The config file is located at `~/.scrycli/config.json`
+</Info>
+
+## Current Model Display
+
+The active model is displayed in the chat interface:
+
+```tsx
+<Box alignSelf="flex-end">
+  <Text color='yellow'>
+    {`Model: ${config?.model?.modelName ?? 'Not Selected'}`}
+  </Text>
+</Box>
+```
+
+This provides constant visibility into which AI model is processing your requests.
+
+## Switching Models
+
+To change your model selection:
+
+1. Exit ScryxCLI
+2. Delete or modify `~/.scrycli/config.json`
+3. Restart ScryxCLI to see the model selection menu again
+
+Alternatively, you can manually edit the config file:
+
+```bash
+# Open config in your editor
+vim ~/.scrycli/config.json
+
+# Change the modelName value
+{
+  "model": {
+    "modelProvider": "qwen",
+    "modelName": "qwen/qwen3-next-80b-a3b-instruct:free",
+    "modelKey": "your-api-key"
+  }
+}
+```
+
+## Best Practices
+
+<Note>
+**Recommended Models for Code:**
+- **Qwen3 Next 80B** - Best for complex code generation
+- **OpenAI GPT-OSS-120B** - Balanced performance and speed
+- **ArceeAI Trinity Large** - Good for code understanding tasks
+</Note>
+
+<Warning>
+**API Key Security:**
+- Never commit your `config.json` to version control
+- Keep your OpenRouter API key confidential
+- Rotate keys regularly for security
+</Warning>

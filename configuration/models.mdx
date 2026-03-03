@@ -1,0 +1,344 @@
+---
+title: Model Configuration
+description: Configure and select AI models for ScryxCLI code analysis
+---
+
+## Overview
+
+ScryxCLI supports multiple AI providers and models for code analysis. You can select your preferred model through an interactive CLI interface or by manually editing the configuration file.
+
+## Available Providers
+
+ScryxCLI supports the following AI providers through OpenRouter:
+
+| Provider | Models Available | Recommended Model |
+|----------|------------------|-------------------|
+| OpenAI | 2 models | gpt-oss-120b |
+| ArceeAI | 2 models | Trinity Large |
+| Qwen | 2 models | Qwen3 Next 80B A3B Instruct |
+| Mistral | 1 model | Mistral Small 3.1 24B |
+| StepFun | 1 model | Step 3.5 Flash |
+| Zai | 1 model | GLM 4.5 Air |
+
+<Note>
+  All models listed are free-tier models accessible through OpenRouter with rate limits.
+</Note>
+
+## Selecting a Model
+
+### Using the CLI Command
+
+<Steps>
+  <Step title="Open model selection">
+    While ScryxCLI is running, type:
+    
+    ```bash
+    /model
+    ```
+  </Step>
+  
+  <Step title="Choose your provider">
+    Use arrow keys to navigate and Enter to select:
+    
+    ```
+    > OpenAI
+      StepFun
+      Qwen
+      ArceeAI
+      Mistral
+      Zai
+    ```
+  </Step>
+  
+  <Step title="Select a model">
+    After choosing a provider, select from available models:
+    
+    ```
+    > gpt-oss-120b (Recommended)
+      gpt-oss-20b
+    ```
+  </Step>
+  
+  <Step title="Configuration saved">
+    Your selection is automatically saved to `~/.scrycli/config.json`
+  </Step>
+</Steps>
+
+## Available Models
+
+### OpenAI Models
+
+```typescript
+// From src/ui/SelectModel.tsx:21-24
+openai: [
+  { label: "gpt-oss-120b (Recommended)", value: "openai/gpt-oss-120b:free" },
+  { label: "gpt-oss-20b", value: "openai/gpt-oss-20b:free" },
+]
+```
+
+**Recommended:** `openai/gpt-oss-120b:free` - Best balance of capability and availability
+
+### ArceeAI Models
+
+```typescript
+arceeai: [
+  { label: "Trinity Large (Recommended)", value: "arcee-ai/trinity-large-preview:free" },
+  { label: "Trinity Mini", value: "arcee-ai/trinity-mini:free" },
+]
+```
+
+**Recommended:** `arcee-ai/trinity-large-preview:free` - Optimized for code tasks
+
+### Qwen Models
+
+```typescript
+qwen: [
+  { label: "Qwen3 Coder 480B A35B", value: "qwen/qwen3-coder:free" },
+  { label: "Qwen3 Next 80B A3B Instruct (Recommended)", value: "qwen/qwen3-next-80b-a3b-instruct:free" },
+]
+```
+
+**Recommended:** `qwen/qwen3-next-80b-a3b-instruct:free` - Excellent instruction following
+
+### Mistral Models
+
+```typescript
+mistral: [
+  { label: "Mistral Small 3.1 24B", value: "mistralai/mistral-small-3.1-24b-instruct:free" },
+]
+```
+
+Single option: `mistralai/mistral-small-3.1-24b-instruct:free`
+
+### StepFun Models
+
+```typescript
+stepfun: [
+  { label: "Step 3.5 Flash", value: "stepfun/step-3.5-flash:free" },
+]
+```
+
+Single option: `stepfun/step-3.5-flash:free` - Fast inference
+
+### Zai Models
+
+```typescript
+zai: [
+  { label: "GLM 4.5 Air", value: "z-ai/glm-4.5-air:free" },
+]
+```
+
+Single option: `z-ai/glm-4.5-air:free`
+
+## Configuration Structure
+
+When you select a model, ScryxCLI updates your configuration:
+
+```json
+{
+  "model": {
+    "modelProvider": "openai",
+    "modelName": "openai/gpt-oss-120b:free",
+    "modelKey": "your-api-key"
+  }
+}
+```
+
+The configuration is set via:
+
+```typescript
+// From src/ui/SelectModel.tsx:68
+setConfig('model', {
+  modelProvider: selectedProvider,
+  modelName: item.value
+});
+```
+
+### Configuration Fields
+
+| Field | Description | Example |
+|-------|-------------|----------|
+| `modelProvider` | Provider identifier | `"openai"`, `"qwen"`, `"arceeai"` |
+| `modelName` | Full model path | `"openai/gpt-oss-120b:free"` |
+| `modelKey` | Your API key | `"sk-or-v1-..."` |
+
+<Warning>
+  You must set `modelKey` separately. The model selection command only sets `modelProvider` and `modelName`.
+</Warning>
+
+## Manual Configuration
+
+You can manually edit your model configuration:
+
+<Steps>
+  <Step title="Open config file">
+    ```bash
+    nano ~/.scrycli/config.json
+    ```
+  </Step>
+  
+  <Step title="Update model settings">
+    ```json
+    {
+      "model": {
+        "modelProvider": "qwen",
+        "modelName": "qwen/qwen3-next-80b-a3b-instruct:free",
+        "modelKey": "sk-or-v1-your-key-here"
+      }
+    }
+    ```
+  </Step>
+  
+  <Step title="Save and restart">
+    Changes take effect when you restart ScryxCLI
+  </Step>
+</Steps>
+
+## Model Selection Process
+
+The model selection UI follows a two-step process:
+
+```typescript
+// From src/ui/SelectModel.tsx:44-75
+const SelectModel = (props: selectModelType) => {
+    const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
+    const [selectedModel, setSelectedModel] = useState<string | null>(null);
+
+    // Step 1: Select provider
+    if (!selectedProvider) {
+        return <SelectInput items={providers} onSelect={setSelectedProvider} />;
+    }
+
+    // Step 2: Select model from provider's available models
+    if (selectedProvider && !selectedModel) {
+        return <SelectInput 
+            items={modelsMap[selectedProvider]} 
+            onSelect={(item) => {
+                setSelectedModel(item.value);
+                setConfig('model', { 
+                    modelProvider: selectedProvider, 
+                    modelName: item.value 
+                });
+            }} 
+        />;
+    }
+};
+```
+
+## Viewing Current Model
+
+Your currently selected model is displayed in the ScryxCLI interface:
+
+```typescript
+// From src/ui/InputBox.tsx:40
+<Text color='yellow'>
+  {`Model: ${config?.model?.modelName ?? 'Not Selected'}`}
+</Text>
+```
+
+If no model is selected, you'll see "Model: Not Selected"
+
+## Model Usage
+
+The selected model is used when making AI calls:
+
+```typescript
+// From src/model/openRouter.ts:19-23
+const result = openRouterClient.callModel({
+  model: `${getConfig().model.modelName}`,
+  instructions: systemPrompt,
+  input: `${prompt} \n\nFile Tree: ${fileTreeString}`,
+});
+```
+
+## Validation Requirements
+
+Before ScryxCLI can make model calls, it validates:
+
+```typescript
+// From src/lib/isModelSelected.ts:6-15
+const isModelSelected = (): boolean => {
+    const config = getConfig();
+    if (!config?.model?.modelName) return false;
+    if (!config?.model?.modelKey) return false;
+    return config.model.modelName !== '' && config.model.modelKey !== '';
+};
+```
+
+Both `modelName` and `modelKey` must be:
+- Present in the configuration
+- Non-empty strings
+
+## Choosing the Right Model
+
+### For Code Analysis
+
+**Recommended:** `qwen/qwen3-coder:free`
+- Specialized for code understanding
+- Excellent at parsing syntax
+- Good for large codebases
+
+### For General Tasks
+
+**Recommended:** `openai/gpt-oss-120b:free`
+- Balanced performance
+- Good instruction following
+- Widely available
+
+### For Speed
+
+**Recommended:** `stepfun/step-3.5-flash:free`
+- Fastest inference
+- Lower latency
+- Good for quick queries
+
+## Troubleshooting
+
+### Model Not Selected Error
+
+If you see "Model: Not Selected":
+
+<Steps>
+  <Step title="Run model selection">
+    ```bash
+    /model
+    ```
+  </Step>
+  
+  <Step title="Verify configuration">
+    ```bash
+    cat ~/.scrycli/config.json
+    ```
+    
+    Ensure `model.modelName` exists
+  </Step>
+  
+  <Step title="Add API key">
+    Make sure `model.modelKey` is also set
+  </Step>
+</Steps>
+
+### Model Calls Failing
+
+If model calls fail:
+
+1. **Check model name format**
+   - Must be in format: `provider/model:tier`
+   - Example: `openai/gpt-oss-120b:free`
+
+2. **Verify API key**
+   - See [API Keys Configuration](/configuration/api-keys)
+
+3. **Check OpenRouter status**
+   - Some models may be temporarily unavailable
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="API Keys" icon="key" href="/configuration/api-keys">
+    Configure authentication for model access
+  </Card>
+  <Card title="Configuration Setup" icon="gear" href="/configuration/setup">
+    Learn about the configuration system
+  </Card>
+</CardGroup>

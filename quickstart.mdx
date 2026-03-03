@@ -1,80 +1,283 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Get started with ScryxCLI in minutes with this hands-on tutorial
 ---
 
-## Get started in three steps
+# Quickstart guide
 
-Get your documentation site running locally and make your first customization.
+This guide will walk you through your first ScryxCLI session, from launching the CLI to executing AI-powered file operations.
 
-### Step 1: Set up your local environment
+## Launch ScryxCLI
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+Open your terminal and run:
 
-### Step 2: Deploy your changes
+```bash
+scrycli
+```
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+If this is your first time, you'll see the authentication and model selection prompts. If you've already set up ScryxCLI, you'll see the main interface:
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+```
+ ███████  ██████ ██████  ██    ██  ██████ ██      ██ 
+ ██      ██      ██   ██  ██  ██  ██      ██      ██ 
+ ███████ ██      ██████    ████   ██      ██      ██ 
+      ██ ██      ██   ██    ██    ██      ██      ██ 
+ ███████  ██████ ██   ██    ██     ██████ ███████ ██ 
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+/home/your-username/your-project
+> Ask anything about your codebase...
 
-### Step 3: Go live
+Model: qwen/qwen3-next-80b-a3b-instruct:free
+```
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+<Info>
+  The current working directory is displayed above the input prompt. ScryxCLI will perform file operations relative to this directory.
+</Info>
 
-## Next steps
+## Your first command
 
-Now that you have your docs running, explore these key features:
+Let's create a simple HTML file using natural language. Type the following and press `Enter`:
 
-<CardGroup cols={2}>
+```
+Create a simple HTML landing page with a hero section
+```
 
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
+You'll see a loading indicator while the AI processes your request:
 
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
+```
+⠋ Thinking…
+```
 
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
+## Understanding the response
 
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
+ScryxCLI's AI engine converts your natural language command into structured JSON instructions:
 
-</CardGroup>
+```json
+{
+  "action": "create_file",
+  "file": "public/index.html",
+  "content": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>Landing Page</title>\n  <style>\n    body { margin: 0; font-family: Arial, sans-serif; }\n    .hero { height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }\n    .hero h1 { font-size: 3rem; }\n  </style>\n</head>\n<body>\n  <div class=\"hero\">\n    <h1>Welcome to Our Product</h1>\n  </div>\n</body>\n</html>"
+}
+```
+
+The response appears in a green bordered box:
+
+```
+┌───────────────────────────────────────────┐
+│ {                                         │
+│   "action": "create_file",                 │
+│   "file": "public/index.html",             │
+│   "content": "<!DOCTYPE html>..."          │
+│ }                                         │
+└───────────────────────────────────────────┘
+```
+
+ScryxCLI automatically executes the instruction and creates the file at `public/index.html`.
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  The AI engine is powered by the system prompt at `src/model/systemPrompt.ts` which instructs it to return only valid JSON with specific action types.
 </Note>
+
+## Supported actions
+
+ScryxCLI's AI can perform several types of file operations:
+
+### Create a file
+
+```
+Create a React component for a user profile card
+```
+
+Response:
+```json
+{
+  "action": "create_file",
+  "file": "src/components/UserCard.jsx",
+  "content": "import React from 'react';\n\nconst UserCard = ({ name, email }) => {\n  return (\n    <div className=\"user-card\">\n      <h3>{name}</h3>\n      <p>{email}</p>\n    </div>\n  );\n};\n\nexport default UserCard;"
+}
+```
+
+### Read a file
+
+```
+Read the package.json file
+```
+
+Response:
+```json
+{
+  "action": "read_file",
+  "file": "package.json"
+}
+```
+
+### Update a file
+
+```
+Update App.jsx to include error boundary
+```
+
+Response:
+```json
+{
+  "action": "update_file",
+  "file": "src/App.jsx",
+  "content": "import React from 'react';\nimport ErrorBoundary from './ErrorBoundary';\n\nfunction App() {\n  return (\n    <ErrorBoundary>\n      <div className=\"App\">\n        {/* Your app content */}\n      </div>\n    </ErrorBoundary>\n  );\n}\n\nexport default App;"
+}
+```
+
+### Delete a file
+
+```
+Delete the old config.js file
+```
+
+Response:
+```json
+{
+  "action": "delete_file",
+  "file": "config.js"
+}
+```
+
+<Warning>
+  File deletion is permanent. Make sure you have backups or version control in place before deleting files.
+</Warning>
+
+## Using built-in commands
+
+ScryxCLI includes several slash commands for configuration and utilities. All commands start with `/`.
+
+### View available commands
+
+Type `/help` to see all available commands:
+
+```
+/help
+```
+
+Output:
+```
+┌──────────────────────────────────────────┐
+│ /help     - Show help                    │
+│ /path     - change directory             │
+│ /model    - Select a model               │
+│ /apikey   - Set API key                  │
+│ /logout   - Logout                       │
+│ /Report   - Report a bug                 │
+│ /exit     - Exit                         │
+└──────────────────────────────────────────┘
+
+Press [Esc] to go back
+```
+
+### Change AI model
+
+To switch to a different AI model:
+
+```
+/model
+```
+
+This will show the model selection interface again, allowing you to choose a different provider and model.
+
+### Exit ScryxCLI
+
+To exit the application:
+
+```
+/exit
+```
+
+Or press `Ctrl+C` at any time.
+
+<Tip>
+  Press `Esc` to return from any command screen to the main input interface.
+</Tip>
+
+## Example workflow
+
+Here's a complete workflow showing how to use ScryxCLI to scaffold a simple project:
+
+<Steps>
+  <Step title="Create HTML structure">
+    ```
+    Create an HTML file with a navigation bar and main content area
+    ```
+    
+    Result: `public/index.html` created with complete HTML structure
+  </Step>
+  
+  <Step title="Add styles">
+    ```
+    Create a CSS file with modern styles for the navigation and layout
+    ```
+    
+    Result: `styles.css` created with navigation and layout styles
+  </Step>
+  
+  <Step title="Add JavaScript">
+    ```
+    Create a JavaScript file that adds smooth scrolling behavior
+    ```
+    
+    Result: `main.js` created with scroll event handlers
+  </Step>
+  
+  <Step title="Update HTML to include assets">
+    ```
+    Update the HTML file to include the CSS and JavaScript files
+    ```
+    
+    Result: `public/index.html` updated with link and script tags
+  </Step>
+</Steps>
+
+## Understanding AI responses
+
+The AI engine processes your natural language input using the system prompt defined in `src/model/systemPrompt.ts`. Here's how it works:
+
+1. **Intent recognition** - The AI determines what action you want (create, read, update, delete)
+2. **File path inference** - It chooses appropriate file paths based on your description and common conventions
+3. **Content generation** - For create/update operations, it generates complete, functional code
+4. **Structured output** - Everything is returned as valid JSON for execution
+
+<Info>
+  The AI follows strict rules to always return valid JSON. It won't include markdown, explanations, or extra text outside the JSON structure.
+</Info>
+
+## Error handling
+
+If something goes wrong, ScryxCLI will display an error message:
+
+```
+❌ Invalid token. Please check your token and try again.
+```
+
+Common errors include:
+
+- **Authentication errors** - Invalid or expired token
+- **Model errors** - AI provider API issues
+- **File system errors** - Permission issues or invalid paths
+- **JSON parsing errors** - AI response format issues
+
+## Tips for better results
+
+1. **Be specific** - "Create a React component" is less specific than "Create a React component for a user profile card with name and email props"
+
+2. **Include context** - Mention the file type or framework: "Create a TypeScript interface" or "Add a Vue component"
+
+3. **Use standard naming** - Reference files by common conventions: "Update App.jsx" rather than "Update the main app file"
+
+4. **One operation at a time** - Break complex tasks into individual file operations for better results
+
+## What's next?
+
+Now that you understand the basics, you can:
+
+- Experiment with different AI models using `/model`
+- Try more complex file operations and code generation
+- Integrate ScryxCLI into your development workflow
+- Report any issues using `/report`
+
+Happy coding with ScryxCLI!

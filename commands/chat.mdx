@@ -1,0 +1,114 @@
+---
+title: Chat Interface
+description: Main chat interface for AI-powered codebase interactions
+---
+
+The chat interface is the primary way to interact with ScryxCLI. It allows you to ask questions about your codebase, request code generation, and get AI-powered assistance.
+
+## Overview
+
+The chat interface provides:
+- Natural language interaction with AI models
+- Real-time streaming responses
+- Tool execution capabilities
+- Context-aware codebase understanding
+
+## Using the Chat
+
+<Steps>
+  <Step title="Enter your prompt">
+    Type your question or request in the input field at the bottom of the screen.
+    
+    ```bash
+    > Ask anything about your codebase...
+    ```
+  </Step>
+  
+  <Step title="Submit">
+    Press `Enter` to send your message to the AI assistant.
+  </Step>
+  
+  <Step title="View response">
+    The AI will process your request and display the response. Responses are streamed in real-time.
+  </Step>
+</Steps>
+
+## Interface Components
+
+### Current Working Directory
+
+The current working directory is displayed above the input field:
+
+```bash
+/path/to/your/project
+> Ask anything about your codebase...
+```
+
+You can change this using the [/path command](/commands/path).
+
+### Model Indicator
+
+The selected model is displayed in the bottom right:
+
+```bash
+Model: openai/gpt-oss-120b:free
+```
+
+If no model is selected, it shows:
+
+```bash
+Model: Not Selected
+```
+
+Use the [/model command](/commands/model) to select a model.
+
+### Response Display
+
+Responses appear above the input area and include:
+- AI-generated text
+- Tool execution results
+- Error messages (if any)
+- Loading indicators during processing
+
+## Example Prompts
+
+```bash
+> Explain the authentication flow in this codebase
+```
+
+```bash
+> What does the useChat hook do?
+```
+
+```bash
+> Find all React components that use the SelectInput library
+```
+
+```bash
+> Generate a new command component for /settings
+```
+
+## Commands vs Chat
+
+- **Commands** (starting with `/`): Configuration and control operations
+- **Chat prompts** (regular text): AI-powered codebase assistance
+
+<Note>
+  When you start typing `/`, the command help menu appears automatically. Press `Esc` to dismiss it and continue with regular chat.
+</Note>
+
+## Error Handling
+
+If an error occurs during chat:
+- The error message is displayed in the response area
+- You can retry by submitting your prompt again
+- Check that a model is selected and configured properly
+
+## Technical Details
+
+The chat interface:
+- Uses the configured AI model from `/model` command
+- Applies a system prompt for codebase understanding
+- Supports streaming responses for real-time feedback
+- Executes tools as needed based on AI responses
+- Maintains chat context within the current session

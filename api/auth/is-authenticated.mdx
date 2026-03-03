@@ -1,0 +1,99 @@
+---
+title: 'isAuthenticated()'
+description: 'Check if the user has a valid JWT authentication token'
+---
+
+## Overview
+
+The `isAuthenticated()` function verifies whether a user is currently authenticated by validating the JWT token stored in the ScryxCLI configuration.
+
+## Function Signature
+
+```typescript
+const isAuthenticated = (): boolean
+```
+
+## Return Value
+
+<ResponseField name="isAuthenticated" type="boolean" required>
+  Returns `true` if the user has a valid JWT token with a `userId` claim, `false` otherwise.
+</ResponseField>
+
+## How It Works
+
+The function performs the following checks:
+
+1. **Retrieves Configuration**: Loads the ScryxCLI configuration using `getConfig()`
+2. **Token Existence**: Checks if `config.user.token` exists
+3. **JWT Secret Validation**: Verifies that `JWT_SECRET` environment variable is defined
+4. **Token Verification**: Uses `jsonwebtoken` to verify the token signature
+5. **Payload Validation**: Ensures the decoded token contains a `userId` field
+
+<Note>
+  Any errors during the authentication check (invalid token, missing secret, etc.) result in `false` being returned.
+</Note>
+
+## Authentication Requirements
+
+For authentication to be considered valid, all of the following must be true:
+
+- User configuration contains a token (`config.user.token`)
+- `JWT_SECRET` environment variable is set
+- Token signature is valid and verified
+- Decoded token payload contains a `userId` property
+
+## Implementation Details
+
+```typescript
+const isAuthenticated = (): boolean => {
+  try {
+    const config = getConfig();
+
+    if (!config?.user?.token) return false;
+    if (!process.env.JWT_SECRET) throw new Error('JWT_SECRET is not defined');
+
+    const decoded = jwt.verify(config.user.token, process.env.JWT_SECRET) as any;
+
+    return decoded && typeof decoded === 'object' && 'userId' in decoded;
+  } catch (error) {
+    return false;
+  }
+};
+```
+
+## Usage Example
+
+```typescript
+import isAuthenticated from './lib/auth.js';
+
+if (isAuthenticated()) {
+  console.log('User is authenticated');
+  // Proceed with authenticated operations
+} else {
+  console.log('User is not authenticated');
+  // Redirect to login or show authentication prompt
+}
+```
+
+## Error Handling
+
+The function uses a try-catch block to handle all potential errors gracefully:
+
+- **Missing Token**: Returns `false` if no token exists in configuration
+- **Invalid Token**: Returns `false` if JWT verification fails
+- **Expired Token**: Returns `false` if token has expired
+- **Missing JWT_SECRET**: Returns `false` if environment variable is not set
+- **Malformed Token**: Returns `false` if token cannot be decoded
+
+<Info>
+  The function never throws exceptions - it always returns a boolean value, making it safe to use in conditional statements.
+</Info>
+
+## Related Functions
+
+- `getConfig()` - Retrieves the ScryxCLI configuration
+- `isModelSelected()` - Checks if a model has been configured
+
+## Source Location
+
+`src/lib/auth.ts:8`

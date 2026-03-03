@@ -1,0 +1,274 @@
+---
+title: Analyzing Code with ScryxCLI
+description: Learn how to use ScryxCLI's AI engine to analyze your codebase and detect errors through natural language commands
+---
+
+ScryxCLI uses AI to understand your natural language commands and analyze your code for errors, potential issues, and improvements. This guide walks you through the code analysis workflow.
+
+## How Code Analysis Works
+
+ScryxCLI's AI engine interprets your natural language prompts and automatically:
+
+1. Scans your project file structure
+2. Reads relevant files based on your request
+3. Analyzes code for errors, bugs, and improvements
+4. Returns structured responses with actionable insights
+
+The system uses the file tree context to understand your project structure and provide accurate analysis.
+
+## Basic Code Analysis
+
+<Steps>
+  <Step title="Start ScryxCLI">
+    Launch the CLI tool in your project directory:
+
+    ```bash
+    scrycli
+    ```
+
+    The tool will automatically detect your project structure and generate a file tree for context.
+  </Step>
+
+  <Step title="Request Code Analysis">
+    Use natural language to ask ScryxCLI to analyze your code:
+
+    ```bash
+    > Analyze the App.jsx file for potential errors
+    ```
+
+    Or be more specific:
+
+    ```bash
+    > Check the authentication logic in src/lib/auth.ts for security issues
+    ```
+  </Step>
+
+  <Step title="Review AI Analysis">
+    ScryxCLI will return a structured JSON response with the analysis results:
+
+    ```json
+    {
+      "action": "explain_code",
+      "file": "src/lib/auth.ts",
+      "analysis": "Found potential JWT verification issue..."
+    }
+    ```
+
+    The AI examines:
+    - Syntax errors
+    - Type mismatches
+    - Security vulnerabilities
+    - Best practice violations
+    - Potential runtime errors
+  </Step>
+</Steps>
+
+## Analyzing Specific Files
+
+You can target specific files or patterns in your analysis requests:
+
+```bash
+# Analyze a single file
+> Review the error handling in src/hooks/useChat.ts
+
+# Analyze multiple related files
+> Check all files in the src/tools directory for consistency
+
+# Analyze by file type
+> Find issues in all TypeScript config files
+```
+
+<Note>
+  ScryxCLI automatically ignores common directories like `node_modules`, `.git`, `dist`, `build`, and `.next` to focus on your source code.
+</Note>
+
+## Advanced Analysis Patterns
+
+### Search and Analyze
+
+Combine search with analysis for targeted insights:
+
+```bash
+# Find and analyze specific code patterns
+> Search for all error handling code and check for missing edge cases
+
+# Locate configuration issues
+> Find all API calls and verify error handling
+```
+
+### Context-Aware Analysis
+
+The AI uses your project's file tree to provide context-aware analysis:
+
+```bash
+> Analyze how the useToolExecutor hook integrates with the file operations
+```
+
+ScryxCLI will examine:
+- `src/hooks/useToolExecutor.ts`
+- `src/tools/readFile.ts`
+- `src/tools/writeFile.ts`
+- `src/tools/createFile.ts`
+- `src/tools/deleteFile.ts`
+
+And provide insights on the integration points.
+
+### File Tree Context
+
+ScryxCLI automatically includes your project structure in every analysis:
+
+```
+File Tree:
+src/
+  bin/
+  config/
+    configManage.ts
+  hooks/
+    useChat.ts
+    useToolExecutor.ts
+  lib/
+    auth.ts
+    isModelSelected.ts
+  model/
+    openRouter.ts
+    systemPrompt.ts
+  tools/
+    createFile.ts
+    deleteFile.ts
+    readFile.ts
+    writeFile.ts
+    getFileTree.ts
+```
+
+This context helps the AI understand file relationships and dependencies.
+
+<Tip>
+  For best results, be specific about what you want to analyze. Instead of "check for errors," try "check for null pointer exceptions in the user authentication flow."
+</Tip>
+
+## Example Workflows
+
+### Error Detection Workflow
+
+```bash
+# Step 1: General scan
+> Scan the entire src directory for TypeScript errors
+
+# Step 2: Targeted analysis
+> Focus on the authentication module and check for security issues
+
+# Step 3: Deep dive
+> Analyze the JWT verification logic in src/lib/auth.ts line by line
+```
+
+### Code Quality Review
+
+```bash
+# Check for code smells
+> Review src/hooks/useChat.ts for potential code improvements
+
+# Verify best practices
+> Check if error handling in useToolExecutor follows React best practices
+
+# Analyze performance
+> Identify any performance bottlenecks in the file tree generation
+```
+
+## Understanding Analysis Results
+
+ScryxCLI returns analysis in structured JSON format:
+
+```json
+{
+  "action": "explain_code",
+  "file": "src/hooks/useToolExecutor.ts",
+  "findings": [
+    {
+      "type": "error",
+      "line": 36,
+      "message": "Unhandled exception in JSON.parse",
+      "severity": "high"
+    }
+  ]
+}
+```
+
+### Analysis Action Types
+
+- **explain_code**: Provides detailed code explanation
+- **search_code**: Searches for patterns across files
+- **read_file**: Reads and analyzes specific files
+
+<Note>
+  All analysis is performed locally using your configured AI model. ScryxCLI sends your code to the OpenRouter API based on your model selection.
+</Note>
+
+## Best Practices
+
+1. **Be Specific**: Provide clear, specific prompts for better analysis
+   - Good: "Check for race conditions in the useChat hook"
+   - Bad: "Find bugs"
+
+2. **Use File Paths**: Reference exact file paths when possible
+   - Good: "Analyze src/config/configManage.ts"
+   - Bad: "Check the config file"
+
+3. **Iterative Analysis**: Start broad, then drill down
+   - First: "Scan for errors in the hooks directory"
+   - Then: "Deep dive into the useToolExecutor implementation"
+
+4. **Leverage Context**: Ask questions that use file relationships
+   - "How does the auth module integrate with the config manager?"
+
+## Common Analysis Commands
+
+```bash
+# Security analysis
+> Check for security vulnerabilities in authentication code
+
+# Type safety
+> Verify TypeScript types are correctly used in all tool functions
+
+# Error handling
+> Review error handling patterns across the application
+
+# Code organization
+> Suggest improvements to the project structure
+
+# Dependencies
+> Analyze how components depend on each other
+```
+
+## Troubleshooting
+
+### Analysis Returns Empty Results
+
+If the AI doesn't find issues:
+- Try being more specific in your request
+- Verify the file path is correct
+- Check that the file isn't in an ignored directory
+
+### Unexpected Analysis Output
+
+If you get unexpected results:
+- Ensure your AI model is properly configured
+- Verify the file tree is being generated correctly
+- Check the system prompt configuration
+
+### Performance Issues
+
+For large codebases:
+- Target specific directories instead of analyzing everything
+- Use file patterns to narrow down analysis scope
+- Consider analyzing critical paths first
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Fixing Errors" icon="wrench" href="/guides/fixing-errors">
+    Learn how to use AI suggestions to fix detected errors
+  </Card>
+  <Card title="File Management" icon="folder" href="/guides/file-management">
+    Master file operations through natural language
+  </Card>
+</CardGroup>

@@ -1,0 +1,393 @@
+---
+title: 'System Architecture'
+description: 'Deep dive into ScryxCLI architecture: React/Ink UI layer, hooks system, AI integration, and data flow'
+---
+
+## Overview
+
+ScryxCLI is built on a modern, layered architecture that combines React component patterns with terminal rendering capabilities through Ink, coupled with AI-powered file operations.
+
+## Architectural Layers
+
+```
+┌─────────────────────────────────────┐
+│         User Input (CLI)            │
+└──────────────┬──────────────────────┘
+               │
+┌──────────────▼──────────────────────┐
+│      React/Ink UI Layer             │
+│  (App → InputBox → PromptInput)     │
+└──────────────┬──────────────────────┘
+               │
+┌──────────────▼──────────────────────┐
+│         Hooks Layer                 │
+│  • useChat (AI communication)       │
+│  • useToolExecutor (JSON parser)    │
+└──────────────┬──────────────────────┘
+               │
+       ┌───────┴────────┐
+       │                │
+┌──────▼─────┐   ┌──────▼──────┐
+│ AI Model   │   │ Tools System│
+│ (OpenRouter│   │ (File Ops)  │
+└────────────┘   └─────────────┘
+```
+
+## Entry Point & Initialization
+
+The application starts at `src/bin/index.tsx`:
+
+```tsx
+#!/usr/bin/env node
+import { render } from 'ink';
+import App from '../ui/App.js';
+
+render(<App />);
+```
+
+<Note>
+Ink renders React components to the terminal instead of the DOM, enabling rich interactive CLI experiences.
+</Note>
+
+## UI Layer (React/Ink)
+
+### Application Flow State Machine
+
+The main `App` component (`src/ui/App.tsx`) orchestrates authentication and model selection:
+
+```tsx
+const App = () => {
+  const [authed, setAuthed] = useState<boolean>(isAuthenticated());
+  const [modelSelected, setModelSelected] = useState<boolean>(isModelSelected());
+
+  return (
+    <>
+      {!authed && (
+        <Box flexDirection="column" width="100%">
+          <Header />
+          <Welcome />
+          <Auth onAuthenticated={() => setAuthed(true)} />
+        </Box>
+      )}
+
+      {authed && !modelSelected && (
+        <Box flexDirection="column" width="100%">
+          <Header />
+          <Welcome />
+          <SelectModel onDone={() => setModelSelected(true)} />
+        </Box>
+      )}
+
+      {authed && modelSelected && (
+        <Box flexDirection="column" width="100%">
+          <Welcome />
+          <Footer />
+          <InputBox />
+        </Box>
+      )}
+    </>
+  );
+};
+```
+
+<Accordion title="State Progression">
+**State 1: Unauthenticated**
+- User sees Welcome screen and Auth prompt
+- After authentication → moves to State 2
+
+**State 2: Authenticated, No Model**
+- SelectModel component displays available AI models
+- After selection → moves to State 3
+
+**State 3: Ready**
+- Full InputBox interface becomes available
+- User can interact with AI and execute file operations
+</Accordion>
+
+### Input Processing
+
+The `InputBox` component (`src/ui/InputBox.tsx`) is the main interaction hub:
+
+```tsx
+const InputBox = () => {
+  const cwd = process.cwd();
+  const config = getConfig();
+  const [activeCmd, setActiveCmd] = useState<CommandName | null>(null);
+  const { answer, finalAnswer, loading, error, send } = useChat();
+  const toolResult = useToolExecutor(answer, loading);
+
+  useInput((_input, key) => {
+    if (key.escape) setActiveCmd(null);
+  });
+
+  const handleSubmit = (val: string) => {
+    if (val.startsWith("/")) { 
+      setActiveCmd(val as CommandName); 
+      return; 
+    }
+    send(val);
+  };
+
+  return (
+    <Box flexDirection="column">
+      <AnswerDisplay loading={loading} error={error} answer={toolResult || finalAnswer} />
+      <Text color="gray">{cwd}</Text>
+      <PromptInput 
+        onSubmit={handleSubmit} 
+        placeholder="Ask anything about your codebase..." />
+    </Box>
+  );
+};
+```
+
+**Key responsibilities:**
+- Distinguish between commands (`/exit`, `/logout`) and natural language prompts
+- Integrate both `useChat` and `useToolExecutor` hooks
+- Display loading states, errors, and results
+- Handle keyboard shortcuts (ESC to exit commands)
+
+## Data Flow: User Input → Response
+
+### Step-by-Step Execution Flow
+
+<Accordion title="1. User Enters Prompt">
+User types in `PromptInput` component:
+
+```tsx
+<TextInput
+  value={prompt}
+  onChange={setPrompt}
+  onSubmit={(val) => { onSubmit(val); setPrompt(""); }}
+  placeholder={placeholder || ""} 
+/>
+```
+
+Submits to `InputBox.handleSubmit()`
+</Accordion>
+
+<Accordion title="2. Command vs. Natural Language Detection">
+```tsx
+const handleSubmit = (val: string) => {
+  if (val.startsWith("/")) { 
+    setActiveCmd(val as CommandName); 
+    return; 
+  }
+  send(val); // Natural language → AI processing
+};
+```
+
+- Commands starting with `/` route to `CommandRouter`
+- Everything else goes to AI via `useChat.send()`
+</Accordion>
+
+<Accordion title="3. AI Processing (useChat hook)">
+From `src/hooks/useChat.ts`:
+
+```tsx
+const send = async (prompt: string) => {
+  setAnswer("");
+  setError("");
+  setLoading(true);
+  try {
+    const config = getConfig();
+    const text = await llmCall({
+      prompt,
+      systemPrompt: systemPrompt as string,
+    });
+    setAnswer(text);
+    setFinalAnswer(text);
+  } catch (e: any) {
+    setError(e?.message || "Something went wrong.");
+  } finally {
+    setLoading(false);
+  }
+};
+```
+
+- Calls `llmCall()` from `src/model/openRouter.ts`
+- Includes system prompt and file tree context
+- Updates state with streaming/final answer
+</Accordion>
+
+<Accordion title="4. AI Response with File Tree Context">
+The AI receives enriched context from `src/model/openRouter.ts`:
+
+```tsx
+export async function llmCall({
+  prompt,
+  systemPrompt,
+}: llmCallParams): Promise<string> {
+  const result = openRouterClient.callModel({
+    model: `${getConfig().model.modelName}`,
+    instructions: `${systemPrompt}`,
+    input: `${prompt} \n\nFile Tree: ${fileTreeString}`,
+  });
+  const text = await result.getText();
+  return text;
+}
+```
+
+The file tree is generated via `getFileTree()` which recursively scans the current directory.
+</Accordion>
+
+<Accordion title="5. Tool Execution (useToolExecutor hook)">
+From `src/hooks/useToolExecutor.ts`:
+
+```tsx
+useEffect(() => {
+  if (loading) return;
+  const clean = answer.replace(/|```/g, "").trim();
+  if (!clean.startsWith("{") || !clean.endsWith("}")) return;
+  
+  try {
+    const instruction = JSON.parse(clean);
+    if (!instruction.action) return;
+
+    switch (instruction.action) {
+      case 'create_file':
+        createFile(instruction.file, instruction.content);
+        break;
+      case 'read_file':
+        console.log(readFile(instruction.file));
+        break;
+      case 'write_file':
+        writeFile(instruction.file, instruction.content);
+        break;
+      case 'delete_file':
+        deleteFile(instruction.file);
+        break;
+    }
+  } catch (e: any) {
+    console.error(`Error executing tool: ${e.message}`);
+  }
+}, [loading, answer]);
+```
+
+- Triggers when `loading` becomes `false`
+- Parses JSON from AI response
+- Executes corresponding file operation
+</Accordion>
+
+<Accordion title="6. Result Display">
+`AnswerDisplay` component shows the outcome:
+
+```tsx
+const AnswerDisplay = ({ loading, error, answer }: AnswerDisplayProps) => (
+  <>
+    {loading && (
+      <Box marginTop={1}>
+        <Box marginRight={1}><Spinner type="dots" /></Box>
+        <Text color="gray">Thinking…</Text>
+      </Box>
+    )}
+    {error && <Box marginTop={1}><Text color="red">{"❌"} {error}</Text></Box>}
+    {answer && (
+      <Box marginTop={1} borderStyle="single" borderColor="green" paddingX={1}>
+        <Text>{answer}</Text>
+      </Box>
+    )}
+  </>
+);
+```
+
+Displays:
+- Loading spinner while AI processes
+- Error messages in red
+- Success results in green bordered box
+</Accordion>
+
+## Configuration Management
+
+ScryxCLI stores user preferences in `~/.scrycli/config.json` via `src/config/configManage.ts`:
+
+```tsx
+const configPath = path.join(os.homedir(), ".scrycli", "config.json");
+
+export const getConfig = () => {
+  const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+  return config;
+};
+
+export const setConfig = (key: string, value: any) => {
+  const config = getConfig();
+  config[key] = value;
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+};
+```
+
+**Stored data includes:**
+- API keys (OpenRouter)
+- Selected AI model
+- User authentication state
+
+## Key Design Patterns
+
+### 1. Hook-Based State Management
+- `useChat`: Manages AI conversation state
+- `useToolExecutor`: Side-effect hook for file operations
+- No external state management library needed
+
+### 2. Separation of Concerns
+- **UI Layer**: Pure React components (Ink)
+- **Business Logic**: Custom hooks
+- **External Services**: Model and tools modules
+
+### 3. JSON-Based Tool Protocol
+AI doesn't execute code directly—it returns structured JSON that the CLI interprets and executes safely.
+
+<Note>
+This architecture prevents arbitrary code execution and provides a clear contract between AI and system.
+</Note>
+
+## Performance Considerations
+
+### File Tree Caching
+The file tree is generated once at startup:
+
+```tsx
+const fileTreeString = getFileTree(process.cwd()).join('\n');
+```
+
+For large projects, this could be optimized with:
+- Lazy loading
+- Incremental updates
+- Ignoring additional directories beyond `node_modules`, `.git`, etc.
+
+### Real-Time Streaming
+Currently uses `getText()` which waits for complete response. Future enhancement could implement streaming for better UX.
+
+## Error Handling Strategy
+
+```tsx
+// useChat hook
+try {
+  const text = await llmCall({ prompt, systemPrompt });
+  setAnswer(text);
+  setFinalAnswer(text);
+} catch (e: any) {
+  setError(e?.message || "Something went wrong.");
+} finally {
+  setLoading(false);
+}
+```
+
+```tsx
+// useToolExecutor hook
+try {
+  const instruction = JSON.parse(clean);
+  // ... execute tool
+} catch (e: any) {
+  console.error(`Error executing tool: ${e.message}`);
+}
+```
+
+Errors are:
+- Caught at hook level
+- Displayed in UI via `AnswerDisplay`
+- Logged to console for debugging
+
+## Next Steps
+
+- [Understand the hooks system](/advanced/hooks)
+- [Learn about the tools system](/advanced/tools-system)
+- [File management guide](/guides/file-management)

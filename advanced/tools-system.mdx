@@ -1,0 +1,808 @@
+---
+title: 'Tools System'
+description: 'How the file operation tools work and the system prompt that powers AI-driven automation'
+---
+
+## Overview
+
+The tools system in ScryxCLI enables AI-controlled file operations through a JSON-based protocol. The AI generates structured commands, and the CLI executes them safely.
+
+**Core components:**
+- File operation tools (`createFile`, `readFile`, `writeFile`, `deleteFile`)
+- System prompt that instructs the AI on JSON format
+- `useToolExecutor` hook that parses and executes commands
+
+## Available Tools
+
+All tools are located in `src/tools/` and operate on the file system synchronously.
+
+### createFile
+
+**Location**: `src/tools/createFile.ts`
+
+```tsx
+import fs from 'fs';
+import path from 'path';
+
+const ensureDir = (filePath: string) => {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+};
+
+export const createFile = (filePath: string, content: string) => {
+  const absPath = path.resolve(filePath);
+  ensureDir(absPath);
+  fs.writeFileSync(absPath, content, 'utf-8');
+};
+```
+
+**Features:**
+- Automatically creates parent directories if they don't exist
+- Converts relative paths to absolute paths
+- Overwrites if file already exists
+
+**Usage from AI:**
+```json
+{
+  "action": "create_file",
+  "file": "src/components/Header.tsx",
+  "content": "import React from 'react';\n\nconst Header = () => <h1>Welcome</h1>;\n\nexport default Header;"
+}
+```
+
+<Note>
+The `ensureDir` function uses `recursive: true` to create nested directories in one call.
+</Note>
+
+### readFile
+
+**Location**: `src/tools/readFile.ts`
+
+```tsx
+import fs from 'fs';
+import path from 'path';
+
+export const readFile = (filePath: string) => {
+  const absPath = path.resolve(filePath);
+  return fs.readFileSync(absPath, 'utf-8');
+};
+```
+
+**Features:**
+- Reads entire file content as UTF-8 string
+- Throws error if file doesn't exist
+- Returns content directly (logged in `useToolExecutor`)
+
+**Usage from AI:**
+```json
+{
+  "action": "read_file",
+  "file": "package.json"
+}
+```
+
+**Current behavior:**
+```tsx
+case 'read_file':
+  console.log(readFile(instruction.file));
+  break;
+```
+
+Content is logged to console, not returned to user in UI.
+
+### writeFile
+
+**Location**: `src/tools/writeFile.ts`
+
+```tsx
+import fs from 'fs';
+import path from 'path';
+
+export const writeFile = (filePath: string, content: string) => {
+  const absPath = path.resolve(filePath);
+  fs.writeFileSync(absPath, content, 'utf-8');
+};
+```
+
+**Features:**
+- Overwrites existing file completely
+- Does NOT create parent directories (file must exist or parent dir must exist)
+- No backup of original content
+
+**Usage from AI:**
+```json
+{
+  "action": "write_file",
+  "file": "src/config.js",
+  "content": "export const API_URL = 'https://api.example.com';"
+}
+```
+
+<Accordion title="Difference: createFile vs writeFile">
+**`createFile`**:
+- Creates parent directories automatically
+- Intended for new files
+- Safe to use when directory structure is unknown
+
+**`writeFile`**:
+- Assumes parent directory exists
+- Intended for updating existing files
+- Faster (no directory checks)
+
+**In practice**: Both overwrite existing files. The naming is semantic to guide AI behavior.
+</Accordion>
+
+### deleteFile
+
+**Location**: `src/tools/deleteFile.ts`
+
+```tsx
+import fs from 'fs';
+import path from 'path';
+
+export const deleteFile = (filePath: string) => {
+  const absPath = path.resolve(filePath);
+  fs.unlinkSync(absPath);
+};
+```
+
+**Features:**
+- Permanently deletes file (no trash/recycle bin)
+- Throws error if file doesn't exist
+- Cannot delete directories (use `fs.rmdirSync` for that)
+
+**Usage from AI:**
+```json
+{
+  "action": "delete_file",
+  "file": "src/oldComponent.tsx"
+}
+```
+
+<Note>
+There is no undo. Files are permanently deleted from disk.
+</Note>
+
+### getFileTree
+
+**Location**: `src/tools/getFileTree.ts`
+
+```tsx
+import fs from 'fs';
+import path from 'path';
+
+const IGNORED_DIRS = ['.git', 'node_modules', 'dist', 'build', '.next'];
+
+export const getFileTree = (dir: string, prefix = ''): string[] => {
+  let results: string[] = [];
+  const list = fs.readdirSync(dir);
+
+  list.forEach(file => {
+    if (IGNORED_DIRS.includes(file)) return;
+    const filePath = path.join(dir, file);
+    const stat = fs.statSync(filePath);
+
+    if (stat.isDirectory()) {
+      results.push(prefix + file + '/');
+      results = results.concat(getFileTree(filePath, prefix + '  '));
+    } else {
+      results.push(prefix + file);
+    }
+  });
+
+  return results;
+};
+```
+
+**Features:**
+- Recursively scans directory structure
+- Ignores common build/dependency directories
+- Indents subdirectories with spaces
+- Returns array of strings (one per file/folder)
+
+**Example output:**
+```
+src/
+  components/
+    Header.tsx
+    Footer.tsx
+  hooks/
+    useChat.ts
+    useToolExecutor.ts
+  index.tsx
+package.json
+README.md
+```
+
+**Usage in context:**
+```tsx
+// src/model/openRouter.ts
+const fileTreeString = getFileTree(process.cwd()).join('\n');
+
+export async function llmCall({ prompt, systemPrompt }) {
+  const result = openRouterClient.callModel({
+    model: `${getConfig().model.modelName}`,
+    instructions: `${systemPrompt}`,
+    input: `${prompt} \n\nFile Tree: ${fileTreeString}`,
+  });
+  return await result.getText();
+}
+```
+
+The AI receives the file tree with every prompt for context-aware responses.
+
+## System Prompt Structure
+
+**Location**: `src/model/systemPrompt.ts`
+
+This prompt instructs the AI on how to format responses for tool execution.
+
+### Full System Prompt
+
+```tsx
+export const systemPrompt = `
+You are SCRYCLI's AI engine. Your role is to interpret natural language commands from the user and respond with structured JSON instructions that the CLI can execute.
+
+Rules:
+You must return only valid JSON. Do not include backticks, markdown, or extra text. Output must start with { and end with }.
+
+1. Always return a JSON object with these keys:
+   - "action": one of ["read_file", "write_file", "create_file", "delete_file", "update_file", "explain_code", "search_code"]
+   - "file": the relative path of the file to operate on
+   - "content": the full code or text for the file (only if applicable, e.g., create_file, write_file)
+   - (optional) "changes": description of modifications if updating an existing file
+
+2. Do NOT return explanations, markdown, or extra text outside the JSON. Output JSON only.
+
+3. Use the given project file structure to choose correct file paths. If multiple files match the user's description, pick the most relevant one based on standard naming conventions. If none exists, propose a new file name (e.g., \`index.html\` for HTML entry, or \`game.html\` for game-related prompts).
+
+4. If the user does not specify a file name, decide an appropriate file name and directory based on:
+   - HTML files → "public/index.html" (or "public/game.html" if index exists)
+   - JavaScript entry → "src/App.jsx" if React, else "main.js"
+   - CSS files → "styles.css" in the same directory as HTML
+
+5. For edits:
+   - If the action is "update_file", return the full modified content in "content".
+   - Include original file content in reasoning before generating final content (but only return final content in JSON).
+
+6. If the prompt asks for code generation, ensure "content" contains complete, functional code.
+
+7. Never execute commands. Only provide JSON instructions.
+
+8. Example outputs:
+{
+  "action": "create_file",
+  "file": "public/game.html",
+  "content": "<!DOCTYPE html><html>...</html>"
+}
+
+{
+  "action": "update_file",
+  "file": "src/App.jsx",
+  "content": "import React from 'react'; ... modified code ..."
+}
+
+`;
+```
+
+### Key Instruction Breakdown
+
+<Accordion title="Rule 1: JSON Structure">
+```json
+{
+  "action": "create_file",
+  "file": "path/to/file.tsx",
+  "content": "file contents here",
+  "changes": "Optional description"
+}
+```
+
+**Required fields:**
+- `action`: Must be one of the defined actions
+- `file`: Relative path from project root
+- `content`: Full file contents (for create/write/update)
+
+**Optional fields:**
+- `changes`: Human-readable description of modifications
+</Accordion>
+
+<Accordion title="Rule 2: No Markdown or Explanations">
+**Bad response:**
+```
+Sure! Here's the code you requested:
+
+```json
+{
+  "action": "create_file",
+  "file": "app.js"
+}
+```
+
+This will create a new JavaScript file.
+```
+
+**Good response:**
+```json
+{
+  "action": "create_file",
+  "file": "app.js",
+  "content": "console.log('Hello world');"
+}
+```
+
+The system prompt explicitly forbids any text outside the JSON object.
+</Accordion>
+
+<Accordion title="Rule 3: Use File Tree Context">
+Since the AI receives the project's file tree, it can:
+
+1. **Choose existing files** for modifications:
+```json
+{
+  "action": "write_file",
+  "file": "src/components/Header.tsx",
+  "content": "..."
+}
+```
+
+2. **Propose new files** in appropriate directories:
+```json
+{
+  "action": "create_file",
+  "file": "src/components/Footer.tsx",
+  "content": "..."
+}
+```
+
+3. **Follow project conventions**:
+- If project has `src/components/`, new components go there
+- If project uses TypeScript (`.tsx` files exist), generate `.tsx` files
+</Accordion>
+
+<Accordion title="Rule 4: Smart File Naming">
+When user says "create a game", the AI infers:
+
+**Context**: File tree shows `public/index.html` exists
+
+**AI decision**:
+```json
+{
+  "action": "create_file",
+  "file": "public/game.html",
+  "content": "<!DOCTYPE html>..."
+}
+```
+
+**Naming conventions programmed:**
+- HTML → `public/` directory
+- React components → `src/components/`
+- Utilities → `src/utils/`
+- Styles → Same directory as related component
+</Accordion>
+
+<Accordion title="Rule 5: Update Strategy">
+The system prompt mentions `update_file` action, but currently it's not implemented differently from `write_file`.
+
+**Intended behavior:**
+1. AI reads existing file content (via file tree or internal reasoning)
+2. Generates modified version
+3. Returns full updated content
+
+**Current implementation:**
+No distinction between `update_file` and `write_file`. Both overwrite completely.
+
+**Future enhancement:**
+Could implement partial updates:
+```json
+{
+  "action": "update_file",
+  "file": "src/config.js",
+  "changes": "Added new API endpoint",
+  "patch": "@@ -5,0 +5,1 @@\n+export const NEW_API = 'https://new.api.com';"
+}
+```
+</Accordion>
+
+<Accordion title="Rules 6-7: Code Quality & Safety">
+**Rule 6**: Complete, functional code
+```json
+{
+  "action": "create_file",
+  "file": "src/Button.tsx",
+  "content": "import React from 'react';\n\ninterface ButtonProps {\n  label: string;\n  onClick: () => void;\n}\n\nconst Button: React.FC<ButtonProps> = ({ label, onClick }) => (\n  <button onClick={onClick}>{label}</button>\n);\n\nexport default Button;"
+}
+```
+
+Not partial snippets or pseudo-code.
+
+**Rule 7**: Never execute
+
+The AI generates instructions; the CLI executes them. This separation ensures safety.
+</Accordion>
+
+### Actions Reference
+
+| Action | Implemented | Purpose |
+|--------|-------------|----------|
+| `read_file` | ✅ Yes | Read file contents (logs to console) |
+| `write_file` | ✅ Yes | Overwrite existing file |
+| `create_file` | ✅ Yes | Create new file with content |
+| `delete_file` | ✅ Yes | Delete file permanently |
+| `update_file` | ⚠️ Mentioned | Currently same as `write_file` |
+| `explain_code` | ❌ Not implemented | Would explain code from file |
+| `search_code` | ❌ Not implemented | Would search codebase |
+
+## Tool Execution Flow
+
+From `src/hooks/useToolExecutor.ts`:
+
+```tsx
+export function useToolExecutor(answer: string, loading: boolean) {
+  const [result, setResult] = useState("");
+
+  useEffect(() => {
+    // 1. Wait for AI response to complete
+    if (loading) return;
+    
+    // 2. Clean markdown artifacts
+    const clean = answer.replace(/|```/g, "").trim();
+    
+    // 3. Validate JSON structure
+    if (!clean.startsWith("{") || !clean.endsWith("}")) return;
+    
+    try {
+      // 4. Parse JSON
+      const instruction = JSON.parse(clean);
+      if (!instruction.action) return;
+
+      // 5. Execute corresponding tool
+      switch (instruction.action) {
+        case 'create_file':
+          createFile(instruction.file, instruction.content);
+          break;
+        case 'read_file':
+          console.log(readFile(instruction.file));
+          break;
+        case 'write_file':
+          writeFile(instruction.file, instruction.content);
+          break;
+        case 'delete_file':
+          deleteFile(instruction.file);
+          break;
+      }
+    } catch (e: any) {
+      console.error(`Error executing tool: ${e.message}`);
+    }
+  }, [loading, answer]);
+
+  return result;
+}
+```
+
+### Execution Example
+
+**User input:**
+```
+Create a TypeScript utility function to capitalize strings
+```
+
+**AI receives:**
+```
+Prompt: Create a TypeScript utility function to capitalize strings
+
+File Tree:
+src/
+  components/
+    Header.tsx
+  utils/
+package.json
+```
+
+**AI responds:**
+```json
+{
+  "action": "create_file",
+  "file": "src/utils/capitalize.ts",
+  "content": "export function capitalize(str: string): string {\n  if (!str) return '';\n  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();\n}"
+}
+```
+
+**useToolExecutor processes:**
+1. Receives JSON string in `answer`
+2. Cleans any backticks
+3. Parses JSON
+4. Extracts `action: "create_file"`
+5. Calls `createFile("src/utils/capitalize.ts", "export function...")`
+6. File is created on disk
+
+## Error Handling
+
+### Tool-Level Errors
+
+Each tool uses Node's `fs` module which throws errors:
+
+```tsx
+export const readFile = (filePath: string) => {
+  const absPath = path.resolve(filePath);
+  return fs.readFileSync(absPath, 'utf-8'); // Throws if file doesn't exist
+};
+```
+
+**Common errors:**
+- `ENOENT`: File/directory not found
+- `EACCES`: Permission denied
+- `EISDIR`: Expected file, got directory
+
+### Executor-Level Error Handling
+
+```tsx
+try {
+  const instruction = JSON.parse(clean);
+  // ... execute tool
+} catch (e: any) {
+  console.error(`Error executing tool: ${e.message}`);
+}
+```
+
+**Catches:**
+- JSON parse errors
+- File operation failures
+- Missing parameters
+
+**Behavior:**
+- Logs error to console
+- Continues execution (doesn't crash app)
+- User sees generic error message
+
+### Improving Error Feedback
+
+Current implementation could be enhanced:
+
+```tsx
+try {
+  const instruction = JSON.parse(clean);
+  if (!instruction.action) {
+    setResult("Error: AI response missing 'action' field");
+    return;
+  }
+
+  switch (instruction.action) {
+    case 'create_file':
+      createFile(instruction.file, instruction.content);
+      setResult(`✅ Created ${instruction.file}`);
+      break;
+    // ... other cases
+  }
+} catch (e: any) {
+  setResult(`❌ Error: ${e.message}`);
+}
+```
+
+## Extending the Tools System
+
+### Adding a New Tool
+
+**1. Create tool function** in `src/tools/`:
+
+```tsx
+// src/tools/renameFile.ts
+import fs from 'fs';
+import path from 'path';
+
+export const renameFile = (oldPath: string, newPath: string) => {
+  const absOldPath = path.resolve(oldPath);
+  const absNewPath = path.resolve(newPath);
+  fs.renameSync(absOldPath, absNewPath);
+};
+```
+
+**2. Import in useToolExecutor**:
+
+```tsx
+import { renameFile } from "../tools/renameFile.js";
+```
+
+**3. Add switch case**:
+
+```tsx
+switch (instruction.action) {
+  // ... existing cases
+  case 'rename_file':
+    renameFile(instruction.oldPath, instruction.newPath);
+    break;
+}
+```
+
+**4. Update system prompt**:
+
+```tsx
+export const systemPrompt = `
+...
+1. Always return a JSON object with these keys:
+   - "action": one of [..., "rename_file"]
+...
+
+8. Example outputs:
+{
+  "action": "rename_file",
+  "oldPath": "src/OldComponent.tsx",
+  "newPath": "src/NewComponent.tsx"
+}
+`;
+```
+
+### Complex Tool Example: Code Search
+
+```tsx
+// src/tools/searchCode.ts
+import fs from 'fs';
+import path from 'path';
+import { getFileTree } from './getFileTree.js';
+
+export const searchCode = (pattern: string, directory: string = process.cwd()) => {
+  const files = getFileTree(directory);
+  const results: { file: string; matches: string[] }[] = [];
+
+  files.forEach(file => {
+    if (file.endsWith('/')) return; // Skip directories
+    
+    const filePath = path.join(directory, file);
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const lines = content.split('\n');
+    
+    const matches = lines
+      .map((line, index) => ({ line, index }))
+      .filter(({ line }) => line.includes(pattern))
+      .map(({ line, index }) => `${index + 1}: ${line.trim()}`);
+    
+    if (matches.length > 0) {
+      results.push({ file, matches });
+    }
+  });
+
+  return results;
+};
+```
+
+**Usage in executor**:
+```tsx
+case 'search_code':
+  const searchResults = searchCode(instruction.pattern);
+  setResult(JSON.stringify(searchResults, null, 2));
+  break;
+```
+
+**AI would return**:
+```json
+{
+  "action": "search_code",
+  "pattern": "useEffect"
+}
+```
+
+## Security Considerations
+
+### Path Traversal Prevention
+
+Current implementation uses `path.resolve()` which is vulnerable:
+
+```tsx
+const absPath = path.resolve(filePath); // Could escape project directory
+```
+
+**Safer implementation:**
+```tsx
+import path from 'path';
+
+const projectRoot = process.cwd();
+
+const safeResolve = (filePath: string): string => {
+  const absPath = path.resolve(projectRoot, filePath);
+  
+  // Prevent path traversal attacks
+  if (!absPath.startsWith(projectRoot)) {
+    throw new Error('Access denied: Path outside project directory');
+  }
+  
+  return absPath;
+};
+
+export const createFile = (filePath: string, content: string) => {
+  const absPath = safeResolve(filePath);
+  ensureDir(absPath);
+  fs.writeFileSync(absPath, content, 'utf-8');
+};
+```
+
+### File Size Limits
+
+```tsx
+export const createFile = (filePath: string, content: string) => {
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+  
+  if (Buffer.byteLength(content, 'utf-8') > MAX_FILE_SIZE) {
+    throw new Error('File content exceeds 10MB limit');
+  }
+  
+  const absPath = path.resolve(filePath);
+  ensureDir(absPath);
+  fs.writeFileSync(absPath, content, 'utf-8');
+};
+```
+
+### Dangerous File Extensions
+
+```tsx
+const DANGEROUS_EXTENSIONS = ['.exe', '.sh', '.bat', '.cmd'];
+
+export const createFile = (filePath: string, content: string) => {
+  const ext = path.extname(filePath).toLowerCase();
+  
+  if (DANGEROUS_EXTENSIONS.includes(ext)) {
+    throw new Error(`Creating ${ext} files is not allowed`);
+  }
+  
+  // ... rest of implementation
+};
+```
+
+## Testing Tools
+
+### Manual Testing
+
+```tsx
+// test-tools.ts
+import { createFile } from './src/tools/createFile.js';
+import { readFile } from './src/tools/readFile.js';
+import { writeFile } from './src/tools/writeFile.js';
+import { deleteFile } from './src/tools/deleteFile.js';
+
+// Test create
+createFile('test/sample.txt', 'Hello, World!');
+console.log('Created test/sample.txt');
+
+// Test read
+const content = readFile('test/sample.txt');
+console.log('Read content:', content);
+
+// Test write
+writeFile('test/sample.txt', 'Updated content');
+console.log('Updated test/sample.txt');
+
+// Test delete
+deleteFile('test/sample.txt');
+console.log('Deleted test/sample.txt');
+```
+
+Run with:
+```bash
+node test-tools.ts
+```
+
+### Unit Testing with Jest
+
+```tsx
+// src/tools/__tests__/createFile.test.ts
+import fs from 'fs';
+import { createFile } from '../createFile';
+
+jest.mock('fs');
+
+describe('createFile', () => {
+  it('creates file with content', () => {
+    createFile('test.txt', 'content');
+    
+    expect(fs.mkdirSync).toHaveBeenCalled();
+    expect(fs.writeFileSync).toHaveBeenCalledWith(
+      expect.stringContaining('test.txt'),
+      'content',
+      'utf-8'
+    );
+  });
+});
+```
+
+## Related Documentation
+
+- [System Architecture](/advanced/architecture) - Overall system design
+- [Hooks System](/advanced/hooks) - useToolExecutor implementation details
+- [File Management Guide](/guides/file-management) - Using file operations

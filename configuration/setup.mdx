@@ -1,0 +1,162 @@
+---
+title: Configuration Setup
+description: Understanding ScryxCLI configuration system, file location, and structure
+---
+
+## Overview
+
+ScryxCLI uses a JSON-based configuration system to store user preferences, authentication tokens, and model settings. The configuration is automatically created on first run and persists across sessions.
+
+## Configuration File Location
+
+The configuration file is stored at:
+
+```bash
+~/.scrycli/config.json
+```
+
+This location is defined in `src/config/configManage.ts:5` and uses the system's home directory regardless of your operating system.
+
+<Note>
+  The configuration directory and file are automatically created if they don't exist when you first run ScryxCLI.
+</Note>
+
+## Configuration Structure
+
+The config file follows this JSON structure:
+
+```json
+{
+  "user": {
+    "token": "your-auth-token",
+    "userId": "your-user-id"
+  },
+  "model": {
+    "modelProvider": "openai",
+    "modelName": "openai/gpt-oss-120b:free",
+    "modelKey": "your-api-key"
+  }
+}
+```
+
+### Configuration Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `user.token` | string | Authentication token obtained from scrycli.tech |
+| `user.userId` | string | Your unique user identifier |
+| `model.modelProvider` | string | AI provider name (openai, qwen, mistral, etc.) |
+| `model.modelName` | string | Specific model identifier |
+| `model.modelKey` | string | API key for the selected provider |
+
+## How It Works
+
+### Automatic Initialization
+
+When ScryxCLI starts, it checks for the configuration file:
+
+```typescript
+const configPath = path.join(os.homedir(), ".scrycli", "config.json");
+
+if(!fs.existsSync(configPath)){
+    fs.mkdirSync(path.dirname(configPath), {recursive:true})
+    fs.writeFileSync(configPath, JSON.stringify({}));
+}
+```
+
+If the file doesn't exist, ScryxCLI creates an empty configuration object.
+
+### Configuration Operations
+
+ScryxCLI provides three core configuration operations:
+
+<Steps>
+  <Step title="Reading Configuration">
+    The `getConfig()` function reads the entire configuration:
+    
+    ```typescript
+    const config = getConfig();
+    console.log(config.model.modelName);
+    ```
+  </Step>
+  
+  <Step title="Setting Values">
+    The `setConfig(key, value)` function updates configuration values:
+    
+    ```typescript
+    setConfig('model', {
+      modelProvider: 'openai',
+      modelName: 'openai/gpt-oss-120b:free'
+    });
+    ```
+  </Step>
+  
+  <Step title="Deleting Values">
+    The `deleteConfig(key)` function removes configuration keys:
+    
+    ```typescript
+    deleteConfig('user'); // Removes user authentication
+    ```
+  </Step>
+</Steps>
+
+## Manual Configuration
+
+You can manually edit the configuration file if needed:
+
+<Steps>
+  <Step title="Locate the file">
+    ```bash
+    cd ~/.scrycli
+    ```
+  </Step>
+  
+  <Step title="Edit with your preferred editor">
+    ```bash
+    nano config.json
+    # or
+    vim config.json
+    ```
+  </Step>
+  
+  <Step title="Ensure valid JSON syntax">
+    The file must contain valid JSON. Use a JSON validator if unsure.
+  </Step>
+</Steps>
+
+<Warning>
+  Manual edits to the configuration file can break ScryxCLI functionality if the JSON structure is invalid. Always ensure proper formatting.
+</Warning>
+
+## Configuration Validation
+
+ScryxCLI validates your configuration before allowing model interactions. The validation checks:
+
+- Model name is set and not empty
+- Model API key is set and not empty
+
+This validation happens in `src/lib/isModelSelected.ts:6-15`:
+
+```typescript
+const isModelSelected = (): boolean => {
+    try{
+        const config = getConfig();
+        if (!config?.model?.modelName) return false;
+        if (!config?.model?.modelKey) return false;
+        return config.model.modelName !== '' && config.model.modelKey !== '';
+    }catch(error){
+        return false;
+    }
+};
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configure API Keys" icon="key" href="/configuration/api-keys">
+    Set up authentication for AI providers
+  </Card>
+  <Card title="Select Models" icon="brain" href="/configuration/models">
+    Choose and configure AI models
+  </Card>
+</CardGroup>

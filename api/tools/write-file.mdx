@@ -1,0 +1,84 @@
+---
+title: 'writeFile'
+description: 'Write content to a file synchronously'
+---
+
+## Overview
+
+The `writeFile` function writes content to a file synchronously. If the file already exists, it will be overwritten.
+
+## Function Signature
+
+```typescript
+writeFile(filePath: string, content: string): void
+```
+
+## Parameters
+
+<ParamField path="filePath" type="string" required>
+  The path to the file to write. Can be relative or absolute. Relative paths are resolved from the current working directory.
+</ParamField>
+
+<ParamField path="content" type="string" required>
+  The content to write to the file. The content will be encoded as UTF-8.
+</ParamField>
+
+## Return Value
+
+<ResponseField name="void" type="void">
+  This function does not return a value.
+</ResponseField>
+
+## Implementation Details
+
+The function performs the following steps:
+
+1. Resolves the provided file path to an absolute path using `path.resolve()`
+2. Writes the content to the file synchronously using `fs.writeFileSync()` with UTF-8 encoding
+3. If the file exists, it will be overwritten completely
+
+## Usage Example
+
+```typescript
+import { writeFile } from './tools/writeFile';
+
+// Write a configuration file
+const config = JSON.stringify({ port: 3000, host: 'localhost' }, null, 2);
+writeFile('./config.json', config);
+
+// Write text content
+writeFile('/tmp/output.txt', 'Hello, World!');
+
+// Overwrite existing file
+writeFile('./log.txt', 'New log entry');
+```
+
+## Error Handling
+
+<Warning>
+  This function will throw an error if:
+  - The parent directory does not exist
+  - The file cannot be written due to permissions
+  - The path points to a directory
+  - The disk is full
+</Warning>
+
+<Note>
+  This function does NOT create parent directories. If you need to create a file in a directory that doesn't exist, use the `createFile` function instead.
+</Note>
+
+<Note>
+  This is a synchronous operation and will block the event loop until the file is written. For large files or performance-critical applications, consider using asynchronous file operations.
+</Note>
+
+## Source Code
+
+```typescript
+import fs from 'fs';
+import path from 'path';
+
+export const writeFile = (filePath: string, content: string) => {
+    const absPath = path.resolve(filePath);
+    fs.writeFileSync(absPath, content, 'utf-8');
+};
+```

@@ -1,0 +1,72 @@
+---
+title: 'readFile'
+description: 'Read file contents synchronously'
+---
+
+## Overview
+
+The `readFile` function reads the contents of a file synchronously and returns it as a UTF-8 encoded string.
+
+## Function Signature
+
+```typescript
+readFile(filePath: string): string
+```
+
+## Parameters
+
+<ParamField path="filePath" type="string" required>
+  The path to the file to read. Can be relative or absolute. Relative paths are resolved from the current working directory.
+</ParamField>
+
+## Return Value
+
+<ResponseField name="content" type="string">
+  The contents of the file as a UTF-8 encoded string.
+</ResponseField>
+
+## Implementation Details
+
+The function performs the following steps:
+
+1. Resolves the provided file path to an absolute path using `path.resolve()`
+2. Reads the file synchronously using `fs.readFileSync()` with UTF-8 encoding
+3. Returns the file contents as a string
+
+## Usage Example
+
+```typescript
+import { readFile } from './tools/readFile';
+
+// Read a configuration file
+const config = readFile('./config.json');
+console.log(config);
+
+// Read with absolute path
+const data = readFile('/home/user/data.txt');
+```
+
+## Error Handling
+
+<Warning>
+  This function will throw an error if:
+  - The file does not exist
+  - The file cannot be read due to permissions
+  - The path points to a directory instead of a file
+</Warning>
+
+<Note>
+  This is a synchronous operation and will block the event loop until the file is read. For large files or performance-critical applications, consider using asynchronous file operations.
+</Note>
+
+## Source Code
+
+```typescript
+import fs from 'fs';
+import path from 'path';
+
+export const readFile = (filePath: string) => {
+    const absPath = path.resolve(filePath);
+    return fs.readFileSync(absPath, 'utf-8');
+};
+```

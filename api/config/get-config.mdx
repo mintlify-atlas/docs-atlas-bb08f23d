@@ -1,0 +1,73 @@
+---
+title: 'getConfig()'
+description: 'Retrieve the entire ScryxCLI configuration object'
+---
+
+## Function Signature
+
+```typescript
+export const getConfig = () => Record<string, any>
+```
+
+## Description
+
+Retrieves the entire configuration object from the ScryxCLI configuration file located at `~/.scrycli/config.json`. This function reads the configuration file synchronously and returns the parsed JSON object.
+
+## Return Type
+
+<ResponseField name="config" type="Record<string, any>" required>
+  The complete configuration object containing all stored key-value pairs.
+</ResponseField>
+
+## Usage
+
+```typescript
+import { getConfig } from '@scryxcli/config';
+
+const config = getConfig();
+console.log(config);
+// Output: { apiKey: 'abc123', theme: 'dark', verbose: true }
+```
+
+## Examples
+
+### Get Entire Configuration
+
+```typescript
+const config = getConfig();
+console.log(config);
+```
+
+### Access Specific Configuration Value
+
+```typescript
+const config = getConfig();
+const apiKey = config.apiKey;
+const theme = config.theme;
+
+console.log(`API Key: ${apiKey}`);
+console.log(`Theme: ${theme}`);
+```
+
+### Check if Configuration Key Exists
+
+```typescript
+const config = getConfig();
+
+if ('apiKey' in config) {
+  console.log('API key is configured');
+} else {
+  console.log('API key not found');
+}
+```
+
+## Error Conditions
+
+- If the configuration file cannot be read, a filesystem error will be thrown
+- If the configuration file contains invalid JSON, a `SyntaxError` will be thrown
+
+## Notes
+
+- The configuration file is automatically created at `~/.scrycli/config.json` if it doesn't exist
+- This function performs synchronous file I/O operations
+- Returns an empty object `{}` if the configuration file is empty or newly created

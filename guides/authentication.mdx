@@ -1,0 +1,523 @@
+---
+title: Authentication Setup
+description: Configure ScryxCLI with your API keys and authentication credentials for AI-powered code analysis
+---
+
+ScryxCLI requires authentication to access AI models through OpenRouter. This guide walks you through setting up your API credentials and understanding the authentication system.
+
+## Authentication Overview
+
+ScryxCLI uses a two-layer authentication system:
+
+1. **Model Authentication**: OpenRouter API key for AI model access
+2. **User Authentication**: JWT-based token system (optional)
+
+All authentication data is stored locally in `~/.scrycli/config.json`.
+
+## Quick Start
+
+<Steps>
+  <Step title="Get OpenRouter API Key">
+    Sign up at [OpenRouter](https://openrouter.ai/) and generate an API key:
+
+    1. Create an account at https://openrouter.ai/
+    2. Navigate to API Keys section
+    3. Generate a new API key
+    4. Copy the key (starts with `sk-or-`)
+  </Step>
+
+  <Step title="Launch ScryxCLI">
+    Run the CLI tool:
+
+    ```bash
+    scrycli
+    ```
+
+    If no model is configured, you'll be prompted to set one up.
+  </Step>
+
+  <Step title="Configure Model">
+    When prompted, enter your credentials:
+
+    ```bash
+    Select AI Model: anthropic/claude-3-opus
+    Enter API Key: sk-or-v1-your-api-key-here
+    ```
+
+    This information is saved to `~/.scrycli/config.json`:
+
+    ```json
+    {
+      "model": {
+        "modelName": "anthropic/claude-3-opus",
+        "modelKey": "sk-or-v1-your-api-key-here"
+      }
+    }
+    ```
+  </Step>
+
+  <Step title="Verify Setup">
+    Test your configuration:
+
+    ```bash
+    > Analyze a simple JavaScript file
+    ```
+
+    If authentication is successful, the AI will respond.
+  </Step>
+</Steps>
+
+## Configuration File
+
+ScryxCLI stores all configuration in `~/.scrycli/config.json`:
+
+```typescript
+// From src/config/configManage.ts
+const configPath = path.join(os.homedir(), ".scrycli", "config.json");
+
+if(!fs.existsSync(configPath)){
+  fs.mkdirSync(path.dirname(configPath), {recursive:true})
+  fs.writeFileSync(configPath, JSON.stringify({}));
+}
+```
+
+### Config Structure
+
+```json
+{
+  "model": {
+    "modelName": "anthropic/claude-3-opus",
+    "modelKey": "sk-or-v1-..."
+  },
+  "user": {
+    "token": "eyJhbGciOiJIUzI1NiIs..."
+  }
+}
+```
+
+### Config Fields
+
+- **model.modelName**: The AI model identifier (e.g., `anthropic/claude-3-opus`, `openai/gpt-4`)
+- **model.modelKey**: Your OpenRouter API key
+- **user.token**: JWT token for user authentication (optional)
+
+## Supported AI Models
+
+ScryxCLI works with any model available on OpenRouter:
+
+### Recommended Models
+
+```bash
+# High performance (expensive)
+anthropic/claude-3-opus
+anthropic/claude-3-sonnet
+openai/gpt-4-turbo
+
+# Balanced (moderate cost)
+anthropic/claude-3-haiku
+openai/gpt-3.5-turbo
+meta-llama/llama-3-70b
+
+# Budget-friendly
+meta-llama/llama-3-8b
+mistralai/mistral-7b
+```
+
+### Model Selection
+
+Choose based on your needs:
+
+**For Complex Code Analysis:**
+```json
+{
+  "model": {
+    "modelName": "anthropic/claude-3-opus",
+    "modelKey": "your-key"
+  }
+}
+```
+
+**For Basic Operations:**
+```json
+{
+  "model": {
+    "modelName": "anthropic/claude-3-haiku",
+    "modelKey": "your-key"
+  }
+}
+```
+
+<Tip>
+  Start with Claude 3 Haiku for testing. It's fast, affordable, and handles most ScryxCLI tasks well. Upgrade to Opus for complex refactoring or architecture decisions.
+</Tip>
+
+## Model Validation
+
+ScryxCLI validates your model configuration before making API calls:
+
+```typescript
+// From src/lib/isModelSelected.ts
+const isModelSelected = (): boolean => {
+  try{
+    const config = getConfig();
+    if (!config?.model?.modelName) return false;
+    if (!config?.model?.modelKey) return false;
+    return config.model.modelName !== '' && config.model.modelKey !== '';
+  }catch(error){
+    console.error(error);
+    return false;
+  }
+};
+```
+
+This function checks:
+- Config file exists and is readable
+- `model.modelName` is set and non-empty
+- `model.modelKey` is set and non-empty
+
+## User Authentication (Optional)
+
+ScryxCLI includes an optional JWT-based user authentication system:
+
+```typescript
+// From src/lib/auth.ts
+import jwt from 'jsonwebtoken';
+
+const isAuthenticated = (): boolean => {
+  try {
+    const config = getConfig();
+
+    if (!config?.user?.token) return false;
+    if (!process.env.JWT_SECRET) throw new Error('JWT_SECRET is not defined');
+
+    const decoded = jwt.verify(config.user.token, process.env.JWT_SECRET) as any;
+
+    return decoded && typeof decoded === 'object' && 'userId' in decoded;
+  } catch (error) {
+    return false;
+  }
+};
+```
+
+### Setting Up JWT Authentication
+
+<Steps>
+  <Step title="Set JWT Secret">
+    Create a `.env` file in your project root:
+
+    ```bash
+    JWT_SECRET=your-secure-secret-key-here
+    ```
+  </Step>
+
+  <Step title="Generate User Token">
+    Generate a JWT token for your user:
+
+    ```javascript
+    const jwt = require('jsonwebtoken');
+    const token = jwt.sign(
+      { userId: 'your-user-id' },
+      process.env.JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+    console.log(token);
+    ```
+  </Step>
+
+  <Step title="Add to Config">
+    Manually add the token to `~/.scrycli/config.json`:
+
+    ```json
+    {
+      "model": { /* ... */ },
+      "user": {
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      }
+    }
+    ```
+  </Step>
+</Steps>
+
+<Note>
+  User authentication is optional and not required for basic ScryxCLI functionality. It's primarily used for enterprise deployments or multi-user scenarios.
+</Note>
+
+## Managing Configuration
+
+ScryxCLI provides utilities for managing configuration:
+
+```typescript
+// From src/config/configManage.ts
+
+// Get entire config
+export const getConfig = () => {
+  const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+  return config;
+};
+
+// Set a config value
+export const setConfig = (key: string, value: any) => {
+  const config = getConfig();
+  config[key] = value;
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+};
+
+// Delete a config value
+export const deleteConfig = (key: string) => {
+  const config = getConfig();
+  delete config[key];
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+};
+```
+
+### Manual Config Management
+
+```bash
+# View current config
+cat ~/.scrycli/config.json
+
+# Edit config
+vim ~/.scrycli/config.json
+
+# Reset config (delete and restart ScryxCLI)
+rm ~/.scrycli/config.json
+scrycli
+```
+
+## Changing Models
+
+To switch AI models:
+
+### Method 1: Edit Config File
+
+```bash
+vim ~/.scrycli/config.json
+```
+
+Update the `modelName`:
+```json
+{
+  "model": {
+    "modelName": "anthropic/claude-3-haiku",
+    "modelKey": "your-existing-key"
+  }
+}
+```
+
+### Method 2: Reset and Reconfigure
+
+```bash
+rm ~/.scrycli/config.json
+scrycli
+# Follow setup prompts again
+```
+
+## OpenRouter Integration
+
+ScryxCLI uses the OpenRouter SDK for AI model access:
+
+```typescript
+// From src/model/openRouter.ts
+import { OpenRouter } from '@openrouter/sdk';
+import { getConfig } from '../config/configManage.js';
+
+const openRouterClient = new OpenRouter({
+  apiKey: '',  // Set dynamically from config
+});
+
+export async function llmCall({
+  prompt,
+  systemPrompt,
+}: llmCallParams): Promise<string> {
+  const result = openRouterClient.callModel({
+    model: `${getConfig().model.modelName}`,
+    instructions: `${systemPrompt}`,
+    input: `${prompt} \n\nFile Tree: ${fileTreeString}`,
+  });
+  const text = await result.getText();
+  return text;
+}
+```
+
+### API Key Usage
+
+The API key is read from config for each request:
+
+```typescript
+const config = getConfig();
+const apiKey = config.model.modelKey;
+```
+
+<Note>
+  Your API key is stored in plain text in `~/.scrycli/config.json`. Ensure this file has appropriate permissions (0600 recommended).
+</Note>
+
+## Security Best Practices
+
+### 1. Protect Your Config File
+
+```bash
+# Set restrictive permissions
+chmod 600 ~/.scrycli/config.json
+
+# Verify permissions
+ls -la ~/.scrycli/config.json
+# Should show: -rw-------
+```
+
+### 2. Use Environment Variables for JWT Secret
+
+```bash
+# .env (never commit this)
+JWT_SECRET=your-very-secure-random-string-here
+
+# .gitignore
+echo ".env" >> .gitignore
+```
+
+### 3. Rotate API Keys Regularly
+
+```bash
+# Generate new key at OpenRouter
+# Update config
+vim ~/.scrycli/config.json
+# Update modelKey value
+```
+
+### 4. Don't Share Config Files
+
+Never commit or share your `~/.scrycli/config.json` file:
+
+```bash
+# It contains sensitive credentials
+{
+  "model": {
+    "modelKey": "sk-or-v1-..."  // Secret!
+  }
+}
+```
+
+## Troubleshooting
+
+### Model Not Selected Error
+
+```bash
+Error: Model not configured
+```
+
+**Solution:**
+```bash
+rm ~/.scrycli/config.json
+scrycli
+# Reconfigure model
+```
+
+### Invalid API Key
+
+```bash
+Error: 401 Unauthorized
+```
+
+**Solution:**
+1. Verify your API key at OpenRouter
+2. Check for typos in config.json
+3. Ensure key hasn't expired or been revoked
+
+### JWT Verification Failed
+
+```bash
+Error: JWT_SECRET is not defined
+```
+
+**Solution:**
+```bash
+# Add to .env
+echo "JWT_SECRET=your-secret" >> .env
+
+# Or remove user token from config
+vim ~/.scrycli/config.json
+# Delete the "user" section
+```
+
+### Config File Corrupted
+
+```bash
+Error: Unexpected token in JSON
+```
+
+**Solution:**
+```bash
+# Backup if needed
+cp ~/.scrycli/config.json ~/.scrycli/config.json.bak
+
+# Reset
+rm ~/.scrycli/config.json
+scrycli
+```
+
+## Environment Variables
+
+ScryxCLI uses dotenv for environment variables:
+
+```typescript
+// From src/lib/auth.ts
+import dotenv from 'dotenv';
+dotenv.config({ quiet: true });
+```
+
+### Supported Variables
+
+```bash
+# .env
+JWT_SECRET=your-jwt-secret-for-user-auth
+```
+
+The `quiet: true` option suppresses dotenv warnings if `.env` doesn't exist.
+
+## Multiple Environments
+
+For different projects or environments:
+
+```bash
+# Development
+export SCRYCLI_CONFIG=~/.scrycli/config.dev.json
+
+# Production
+export SCRYCLI_CONFIG=~/.scrycli/config.prod.json
+```
+
+**Note:** This requires modifying the source code to read from `process.env.SCRYCLI_CONFIG`.
+
+## Cost Management
+
+Monitor your OpenRouter usage:
+
+1. **Check Usage Dashboard**: https://openrouter.ai/dashboard
+2. **Set Budget Alerts**: Configure in OpenRouter settings
+3. **Choose Cost-Effective Models**: Use Haiku for routine tasks, Opus for complex work
+
+### Cost Estimates (Approximate)
+
+```bash
+# Per 1M tokens (varies by model)
+Claude 3 Opus:    $15-75
+Claude 3 Sonnet:  $3-15
+Claude 3 Haiku:   $0.25-1.25
+GPT-4 Turbo:      $10-30
+GPT-3.5 Turbo:    $0.50-1.50
+```
+
+<Tip>
+  For typical ScryxCLI usage (file operations, small code analysis), Claude 3 Haiku provides the best value. Reserve Opus for complex architectural decisions.
+</Tip>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Code Analysis" icon="magnifying-glass" href="/guides/analyzing-code">
+    Start analyzing code with your configured model
+  </Card>
+  <Card title="File Management" icon="folder" href="/guides/file-management">
+    Use file operations through natural language
+  </Card>
+</CardGroup>

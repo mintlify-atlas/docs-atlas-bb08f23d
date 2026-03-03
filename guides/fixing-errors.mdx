@@ -1,0 +1,402 @@
+---
+title: Fixing Errors with AI Suggestions
+description: Use ScryxCLI's AI-powered suggestions to automatically fix code errors and implement improvements
+---
+
+After analyzing your code, ScryxCLI can help you fix detected errors through AI-generated code updates. This guide shows you how to leverage AI suggestions for efficient error resolution.
+
+## How AI-Powered Fixes Work
+
+ScryxCLI's fix workflow:
+
+1. **Detects errors** through code analysis
+2. **Generates fixes** using AI understanding of your codebase
+3. **Applies changes** through structured file operations
+4. **Validates** the fixes in context
+
+The AI engine uses your project's file tree and existing code patterns to generate contextually appropriate fixes.
+
+## Basic Fix Workflow
+
+<Steps>
+  <Step title="Identify the Error">
+    First, analyze your code to find issues:
+
+    ```bash
+    > Check src/hooks/useToolExecutor.ts for error handling issues
+    ```
+
+    The AI might identify:
+    ```json
+    {
+      "action": "explain_code",
+      "file": "src/hooks/useToolExecutor.ts",
+      "issue": "Missing try-catch for JSON.parse on line 16"
+    }
+    ```
+  </Step>
+
+  <Step title="Request AI Fix">
+    Ask ScryxCLI to fix the identified issue:
+
+    ```bash
+    > Add error handling to the JSON.parse in useToolExecutor.ts
+    ```
+
+    Or be more specific:
+
+    ```bash
+    > Update useToolExecutor.ts to wrap JSON.parse in try-catch and handle parse errors gracefully
+    ```
+  </Step>
+
+  <Step title="Review the Fix">
+    ScryxCLI will generate an update action:
+
+    ```json
+    {
+      "action": "update_file",
+      "file": "src/hooks/useToolExecutor.ts",
+      "content": "// Full updated file content with fix applied"
+    }
+    ```
+
+    The tool executor will automatically apply the changes to your file.
+  </Step>
+
+  <Step title="Verify the Fix">
+    After the fix is applied, verify it works:
+
+    ```bash
+    > Read src/hooks/useToolExecutor.ts and confirm the error handling is correct
+    ```
+  </Step>
+</Steps>
+
+## File Update Actions
+
+ScryxCLI supports multiple file modification actions:
+
+### Update Existing File
+
+The `update_file` action modifies an existing file:
+
+```bash
+> Fix the authentication bug in src/lib/auth.ts
+```
+
+Response:
+```json
+{
+  "action": "update_file",
+  "file": "src/lib/auth.ts",
+  "content": "import { getConfig } from '../config/configManage.js';\n// Updated code with fix...",
+  "changes": "Added null check before JWT verification"
+}
+```
+
+### Write File
+
+The `write_file` action overwrites a file completely:
+
+```bash
+> Rewrite src/model/systemPrompt.ts with improved instructions
+```
+
+Response:
+```json
+{
+  "action": "write_file",
+  "file": "src/model/systemPrompt.ts",
+  "content": "export const systemPrompt = `Updated prompt...`;"
+}
+```
+
+<Note>
+  Both `update_file` and `write_file` will overwrite the entire file content. The AI includes the full file content in the response, not just the changed lines.
+</Note>
+
+## Common Fix Patterns
+
+### Adding Error Handling
+
+```bash
+# Add try-catch blocks
+> Wrap the file operations in src/tools/ with proper error handling
+
+# Add null checks
+> Add null checking to the config access in src/lib/isModelSelected.ts
+
+# Handle async errors
+> Add error handling to the async llmCall in src/model/openRouter.ts
+```
+
+### Type Safety Fixes
+
+```bash
+# Add TypeScript types
+> Add proper type definitions to the useChat hook parameters
+
+# Fix type errors
+> Fix the TypeScript error in the llmCall return type
+
+# Add type guards
+> Add type guards to the JSON parsing in useToolExecutor
+```
+
+### Security Fixes
+
+```bash
+# Improve authentication
+> Strengthen the JWT verification in src/lib/auth.ts
+
+# Add input validation
+> Add path validation to prevent directory traversal in readFile
+
+# Sanitize user input
+> Add input sanitization to the file path resolver
+```
+
+## Advanced Fix Scenarios
+
+### Multi-File Fixes
+
+When a fix requires changes across multiple files:
+
+```bash
+# Step 1: Update the interface
+> Update the llmCallParams interface in src/model/openRouter.ts to include options
+
+# Step 2: Update the implementation
+> Update the llmCall function to use the new options parameter
+
+# Step 3: Update callers
+> Update useChat.ts to pass options when calling llmCall
+```
+
+<Tip>
+  For complex multi-file fixes, address one file at a time and verify each change before moving to the next.
+</Tip>
+
+### Refactoring Fixes
+
+```bash
+# Improve code structure
+> Refactor the file tree generation to use a class-based approach
+
+# Extract common logic
+> Extract the path resolution logic from all tool functions into a shared utility
+
+# Simplify complex functions
+> Simplify the useToolExecutor effect by breaking it into smaller functions
+```
+
+### Configuration Fixes
+
+```bash
+# Fix config structure
+> Update configManage.ts to validate config schema before saving
+
+# Add config defaults
+> Add default values for missing config keys in getConfig
+
+# Improve config types
+> Add TypeScript interfaces for the config structure
+```
+
+## Understanding Fix Responses
+
+ScryxCLI returns fixes as JSON instructions that the tool executor automatically applies:
+
+```json
+{
+  "action": "update_file",
+  "file": "src/hooks/useToolExecutor.ts",
+  "content": "import { useEffect, useState } from 'react';\n// Full file content...",
+  "changes": "Added error boundary around JSON.parse"
+}
+```
+
+### Response Fields
+
+- **action**: The operation type (`update_file`, `write_file`, `create_file`)
+- **file**: Relative path to the file
+- **content**: Complete new file content
+- **changes**: Optional description of what was modified
+
+### Automatic Execution
+
+The `useToolExecutor` hook automatically:
+
+1. Parses the JSON response
+2. Validates the action
+3. Executes the file operation
+4. Handles errors during execution
+
+```typescript
+// From src/hooks/useToolExecutor.ts
+switch (instruction.action) {
+  case 'write_file':
+    writeFile(instruction.file, instruction.content);
+    break;
+  case 'create_file':
+    createFile(instruction.file, instruction.content);
+    break;
+  // ...
+}
+```
+
+## Best Practices for AI-Assisted Fixes
+
+### 1. Review Before Accepting
+
+Always review AI-generated fixes:
+
+```bash
+# Read the file before fix
+> Read src/lib/auth.ts
+
+# Apply the fix
+> Fix the JWT verification issue
+
+# Read the file after fix
+> Read src/lib/auth.ts
+```
+
+### 2. Be Specific About Requirements
+
+Provide clear fix instructions:
+
+**Good:**
+```bash
+> Add a try-catch block around JSON.parse in useToolExecutor.ts that logs the error and sets a default instruction object
+```
+
+**Bad:**
+```bash
+> Fix the error
+```
+
+### 3. Test After Fixes
+
+Verify fixes work in your environment:
+
+```bash
+# After applying a fix
+> Verify the fix by reading the updated file
+
+# Then manually test
+npm run build
+npm run dev
+```
+
+### 4. Understand the Context
+
+Make sure the AI has the right context:
+
+```bash
+# Provide context for complex fixes
+> Update the authentication flow to support OAuth, keeping compatibility with the existing JWT approach in src/lib/auth.ts
+```
+
+## Example Fix Workflows
+
+### Fixing a Type Error
+
+```bash
+# Step 1: Identify
+> Check src/model/openRouter.ts for type errors
+
+# AI Response:
+# "Property 'model' not found on config"
+
+# Step 2: Fix
+> Add optional chaining to config.model access and handle undefined case
+
+# Step 3: Verify
+> Read src/model/openRouter.ts and check the fix
+
+# Step 4: Test
+npm run build
+```
+
+### Fixing a Security Issue
+
+```bash
+# Step 1: Security scan
+> Analyze src/tools/readFile.ts for security vulnerabilities
+
+# AI Response:
+# "Path traversal vulnerability - user input not validated"
+
+# Step 2: Request fix
+> Add path validation to readFile to prevent directory traversal attacks
+
+# Step 3: Review implementation
+> Read src/tools/readFile.ts
+
+# Step 4: Apply similar fix to other tools
+> Apply the same path validation to writeFile, createFile, and deleteFile
+```
+
+### Refactoring for Maintainability
+
+```bash
+# Step 1: Identify code smell
+> Review src/hooks/useToolExecutor.ts for code quality issues
+
+# Step 2: Request refactor
+> Extract the instruction parsing logic into a separate utility function
+
+# Step 3: Create new file
+> Create src/utils/parseInstruction.ts with the extracted logic
+
+# Step 4: Update original
+> Update useToolExecutor.ts to use the new parseInstruction utility
+```
+
+## Handling Fix Failures
+
+### Invalid JSON Response
+
+If the AI returns invalid JSON:
+
+```bash
+# The tool executor will log:
+# "Error executing tool: Unexpected token"
+
+# Try rephrasing your request:
+> Update src/lib/auth.ts to add better error handling - respond with valid JSON only
+```
+
+### File Not Found
+
+```bash
+# If file doesn't exist:
+# "Error: ENOENT: no such file or directory"
+
+# Verify the file path:
+> Show me the file tree for the src directory
+
+# Then use correct path:
+> Update src/lib/auth.ts (not lib/auth.ts)
+```
+
+### Merge Conflicts
+
+If you've manually edited files:
+
+1. Commit your changes first
+2. Request the AI fix
+3. Manually merge if needed
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="File Management" icon="folder" href="/guides/file-management">
+    Learn about file operations through natural language
+  </Card>
+  <Card title="Code Analysis" icon="magnifying-glass" href="/guides/analyzing-code">
+    Master code analysis techniques
+  </Card>
+</CardGroup>

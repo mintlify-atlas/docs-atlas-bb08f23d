@@ -1,0 +1,114 @@
+---
+title: /exit Command
+description: Exit the ScryxCLI application
+---
+
+The `/exit` command closes the ScryxCLI application.
+
+## Usage
+
+```bash
+/exit
+```
+
+## How It Works
+
+When you enter `/exit`:
+
+1. A loading indicator appears with "Exiting..." message
+2. The application waits 1.5 seconds
+3. ScryxCLI closes completely
+
+<Steps>
+  <Step title="Enter the command">
+    Type `/exit` in the chat prompt and press `Enter`.
+  </Step>
+  
+  <Step title="Wait for exit">
+    You'll see:
+    
+    ```
+    ⠋ Exiting...
+    ```
+    
+    The spinner animation indicates the application is closing.
+  </Step>
+  
+  <Step title="Application closes">
+    After 1.5 seconds, ScryxCLI terminates and returns you to your shell.
+  </Step>
+</Steps>
+
+## Example
+
+```bash
+> /exit
+[Esc] to go back
+
+⠋ Exiting...
+
+# Application closes after 1.5 seconds
+$ 
+```
+
+## Alternative Ways to Exit
+
+You can also exit ScryxCLI by:
+
+- Using the standard terminal interrupt: `Ctrl+C` (may vary by system)
+- Closing the terminal window
+- Using `/logout` which also exits after clearing configuration
+
+## What Happens on Exit
+
+<Note>
+  The `/exit` command performs a clean shutdown but does NOT clear your configuration. Your settings (model selection, API keys, etc.) are preserved for the next session.
+</Note>
+
+When you exit:
+
+- **Saved**: All configuration in `~/.scrycli/config.json`
+- **Lost**: Current chat session and conversation history
+- **Preserved**: Selected model, API keys, user settings
+
+## Difference from /logout
+
+| Feature | /exit | /logout |
+|---------|-------|----------|
+| Closes application | ✓ | ✓ |
+| Clears configuration | ✗ | ✓ |
+| Requires confirmation | ✗ | ✓ |
+| Exit delay | 1.5 seconds | 1 second |
+
+<Warning>
+  If you want to clear your configuration before exiting, use `/logout` instead of `/exit`.
+</Warning>
+
+## Restarting After Exit
+
+After using `/exit`, you can restart ScryxCLI by running:
+
+```bash
+scrycli
+```
+
+Your previous configuration will be loaded automatically, including:
+- Selected AI model
+- API key settings  
+- User preferences
+
+## Canceling Exit
+
+Once you press `Enter` after typing `/exit`, the shutdown begins immediately. To cancel:
+
+- Press `Esc` before pressing `Enter` to return to chat
+- After pressing `Enter`, the exit cannot be canceled (1.5 second delay is brief)
+
+## Use Cases
+
+Use `/exit` when:
+
+- You're finished with your current session
+- You want to close ScryxCLI cleanly
+- You don't need to clear your configuration
+- You plan to return and continue with the same settings

@@ -1,0 +1,519 @@
+---
+title: File Management Operations
+description: Master file operations in ScryxCLI using natural language commands to create, read, update, and delete files
+---
+
+ScryxCLI provides powerful file management capabilities through natural language. The AI engine interprets your commands and executes file operations automatically.
+
+## Available File Operations
+
+ScryxCLI supports five core file operations:
+
+- **read_file**: Read and display file contents
+- **write_file**: Overwrite an existing file
+- **create_file**: Create a new file with content
+- **delete_file**: Remove a file from the filesystem
+- **update_file**: Modify existing file content
+
+All operations use absolute paths resolved from your current working directory.
+
+## Reading Files
+
+<Steps>
+  <Step title="Request File Read">
+    Ask ScryxCLI to read a file using natural language:
+
+    ```bash
+    > Read the auth.ts file
+    ```
+
+    Or be more specific:
+
+    ```bash
+    > Show me the contents of src/lib/auth.ts
+    ```
+  </Step>
+
+  <Step title="AI Generates Action">
+    The AI returns a structured JSON response:
+
+    ```json
+    {
+      "action": "read_file",
+      "file": "src/lib/auth.ts"
+    }
+    ```
+  </Step>
+
+  <Step title="Automatic Execution">
+    The `useToolExecutor` hook automatically executes the read:
+
+    ```typescript
+    case 'read_file':
+      console.log(readFile(instruction.file));
+      break;
+    ```
+
+    The file contents are displayed in your terminal.
+  </Step>
+</Steps>
+
+### Read Examples
+
+```bash
+# Read a specific file
+> Read src/config/configManage.ts
+
+# Read configuration
+> Show me the package.json file
+
+# Read multiple files (requires multiple commands)
+> Read src/tools/readFile.ts
+> Read src/tools/writeFile.ts
+```
+
+<Note>
+  The `readFile` tool uses Node.js `fs.readFileSync()` to read files synchronously. File paths are resolved using `path.resolve()` to ensure absolute paths.
+</Note>
+
+## Creating Files
+
+Create new files with content in a single command:
+
+```bash
+> Create a new file src/utils/logger.ts with a simple console logger
+```
+
+AI Response:
+```json
+{
+  "action": "create_file",
+  "file": "src/utils/logger.ts",
+  "content": "export const logger = {\n  log: (msg: string) => console.log(msg),\n  error: (msg: string) => console.error(msg)\n};"
+}
+```
+
+Execution:
+```typescript
+// From src/tools/createFile.ts
+export const createFile = (filePath: string, content: string) => {
+  const absPath = path.resolve(filePath);
+  ensureDir(absPath);  // Creates parent directories if needed
+  fs.writeFileSync(absPath, content, 'utf-8');
+};
+```
+
+### Create Examples
+
+```bash
+# Create a new component
+> Create src/components/Button.tsx with a basic React button component
+
+# Create a config file
+> Create .env with default environment variables for development
+
+# Create documentation
+> Create docs/API.md with API documentation structure
+
+# Create with specific content
+> Create public/index.html with a basic HTML5 template
+```
+
+<Tip>
+  The `createFile` tool automatically creates parent directories if they don't exist using `fs.mkdirSync()` with the `recursive: true` option.
+</Tip>
+
+## Writing Files
+
+Overwrite existing files completely:
+
+```bash
+> Rewrite src/model/systemPrompt.ts with an improved prompt
+```
+
+AI Response:
+```json
+{
+  "action": "write_file",
+  "file": "src/model/systemPrompt.ts",
+  "content": "export const systemPrompt = `Improved system prompt...`;"
+}
+```
+
+Execution:
+```typescript
+// From src/tools/writeFile.ts
+export const writeFile = (filePath: string, content: string) => {
+  const absPath = path.resolve(filePath);
+  fs.writeFileSync(absPath, content, 'utf-8');
+};
+```
+
+### Write vs. Create
+
+**Use `create_file` when:**
+- The file doesn't exist yet
+- You need parent directories created
+- Starting a new feature or component
+
+**Use `write_file` when:**
+- Completely replacing existing content
+- Resetting a file to defaults
+- The file already exists
+
+```bash
+# Create (file doesn't exist)
+> Create src/hooks/useAuth.ts
+
+# Write (file exists, replace it)
+> Rewrite src/hooks/useAuth.ts with a simplified version
+```
+
+## Updating Files
+
+Modify existing files while preserving context:
+
+```bash
+> Update src/lib/auth.ts to add support for refresh tokens
+```
+
+AI Response:
+```json
+{
+  "action": "update_file",
+  "file": "src/lib/auth.ts",
+  "content": "// Complete updated file content",
+  "changes": "Added refreshToken function and token expiry checking"
+}
+```
+
+### Update Examples
+
+```bash
+# Add functionality
+> Update src/hooks/useChat.ts to add streaming support
+
+# Fix bugs
+> Update src/tools/getFileTree.ts to ignore .env files
+
+# Improve code
+> Update src/config/configManage.ts to add config validation
+
+# Add error handling
+> Update src/hooks/useToolExecutor.ts to handle file operation errors
+```
+
+<Note>
+  The `update_file` action returns the complete new file content, not just a diff. The AI reads the existing file, makes changes, and returns the full updated version.
+</Note>
+
+## Deleting Files
+
+Remove files from your project:
+
+```bash
+> Delete the temporary test file src/temp.ts
+```
+
+AI Response:
+```json
+{
+  "action": "delete_file",
+  "file": "src/temp.ts"
+}
+```
+
+Execution:
+```typescript
+// From src/tools/deleteFile.ts
+export const deleteFile = (filePath: string) => {
+  const absPath = path.resolve(filePath);
+  fs.unlinkSync(absPath);
+};
+```
+
+### Delete Examples
+
+```bash
+# Remove old files
+> Delete src/legacy/oldAuth.ts
+
+# Clean up
+> Delete all files in the temp directory
+
+# Remove generated files
+> Delete dist/bundle.js
+```
+
+**Warning**: Deletions are permanent. There's no confirmation prompt.
+
+## File Path Resolution
+
+All file operations resolve paths from your current working directory:
+
+```typescript
+// From all tool files
+const absPath = path.resolve(filePath);
+```
+
+### Path Examples
+
+```bash
+# Relative path (recommended)
+> Create src/utils/helper.ts
+# Resolves to: /your/project/src/utils/helper.ts
+
+# Current directory
+> Create ./config.json
+# Resolves to: /your/project/config.json
+
+# Nested path
+> Create src/components/ui/Button/index.tsx
+# Parent directories created automatically
+```
+
+## Smart File Naming
+
+The AI engine intelligently determines file names and paths when you don't specify:
+
+```bash
+# HTML files → public/index.html or public/game.html
+> Create a landing page
+# AI suggests: public/index.html
+
+# React components → src/App.jsx
+> Create a main React component
+# AI suggests: src/App.jsx
+
+# Styles → styles.css in same directory
+> Create styles for the landing page
+# AI suggests: public/styles.css
+
+# JavaScript entry → main.js
+> Create a JavaScript entry point
+# AI suggests: src/main.js
+```
+
+From the system prompt:
+```
+4. If the user does not specify a file name, decide an appropriate 
+   file name and directory based on:
+   - HTML files → "public/index.html"
+   - JavaScript entry → "src/App.jsx" if React, else "main.js"
+   - CSS files → "styles.css" in the same directory as HTML
+```
+
+## File Tree Context
+
+ScryxCLI automatically includes your project structure in every command:
+
+```typescript
+// From src/model/openRouter.ts
+const fileTreeString = getFileTree(process.cwd()).join('\n');
+
+export async function llmCall({ prompt, systemPrompt }: llmCallParams) {
+  const result = openRouterClient.callModel({
+    model: `${getConfig().model.modelName}`,
+    instructions: `${systemPrompt}`,
+    input: `${prompt} \n\nFile Tree: ${fileTreeString}`,
+  });
+  return await result.getText();
+}
+```
+
+This allows the AI to:
+- Suggest correct file paths
+- Understand existing structure
+- Avoid naming conflicts
+- Follow your project conventions
+
+### Ignored Directories
+
+```typescript
+// From src/tools/getFileTree.ts
+const IGNORED_DIRS = ['.git', 'node_modules', 'dist', 'build', '.next'];
+```
+
+These directories are excluded from the file tree to keep context focused on source code.
+
+## Batch File Operations
+
+Perform multiple file operations in sequence:
+
+```bash
+# Create multiple related files
+> Create src/types/user.ts with User interface
+> Create src/services/userService.ts with user CRUD operations
+> Create src/hooks/useUser.ts with a custom hook for user data
+```
+
+<Tip>
+  Each command is executed independently. If you need atomic operations (all succeed or all fail), handle it manually or use version control.
+</Tip>
+
+## Advanced Patterns
+
+### Template Generation
+
+```bash
+> Create src/components/Card.tsx with a reusable card component using TypeScript and styled-components
+```
+
+The AI generates a complete component file:
+```json
+{
+  "action": "create_file",
+  "file": "src/components/Card.tsx",
+  "content": "import React from 'react';\nimport styled from 'styled-components';\n\n// Complete component code"
+}
+```
+
+### File Scaffolding
+
+```bash
+# Create a feature module structure
+> Create src/features/auth/index.ts with exports
+> Create src/features/auth/types.ts with TypeScript interfaces
+> Create src/features/auth/hooks.ts with custom hooks
+> Create src/features/auth/utils.ts with helper functions
+```
+
+### Migration Scripts
+
+```bash
+# Update old API calls
+> Update all files in src/api/ to use the new fetch wrapper
+
+# Rename patterns
+> Update src/hooks/useChat.ts to rename 'answer' to 'response'
+```
+
+## Error Handling
+
+File operations include basic error handling:
+
+```typescript
+// From src/hooks/useToolExecutor.ts
+try {
+  const instruction = JSON.parse(clean);
+  if (!instruction.action) return;
+
+  switch (instruction.action) {
+    case 'create_file':
+      createFile(instruction.file, instruction.content);
+      break;
+    // ...
+  }
+} catch (e: any) {
+  console.error(`Error executing tool: ${e.message}`);
+}
+```
+
+### Common Errors
+
+**File Not Found (read/write/delete):**
+```
+Error: ENOENT: no such file or directory
+```
+Verify the file path is correct.
+
+**Permission Denied:**
+```
+Error: EACCES: permission denied
+```
+Check file permissions or run with appropriate privileges.
+
+**Directory Doesn't Exist (write/delete):**
+```
+Error: ENOENT: no such file or directory
+```
+Use `create_file` instead (creates parent dirs).
+
+## Best Practices
+
+### 1. Use Version Control
+
+Always use git before making bulk file changes:
+
+```bash
+git add .
+git commit -m "Before ScryxCLI file operations"
+```
+
+### 2. Verify Before Deleting
+
+```bash
+# Check what you're deleting
+> Read src/old/deprecated.ts
+
+# Then delete
+> Delete src/old/deprecated.ts
+```
+
+### 3. Be Specific with Paths
+
+**Good:**
+```bash
+> Create src/components/ui/Button.tsx
+```
+
+**Bad:**
+```bash
+> Create a button component
+```
+
+### 4. Review Generated Content
+
+```bash
+# After creating
+> Create src/utils/validator.ts with email validation
+
+# Always read to verify
+> Read src/utils/validator.ts
+```
+
+### 5. Understand File Tree Context
+
+The AI knows your project structure:
+
+```bash
+# It will follow existing patterns
+> Create a new hook like useChat
+# AI creates: src/hooks/useNewFeature.ts (following convention)
+```
+
+## Configuration File Location
+
+ScryxCLI stores its config in your home directory:
+
+```typescript
+// From src/config/configManage.ts
+const configPath = path.join(os.homedir(), ".scrycli", "config.json");
+```
+
+```bash
+# View config
+> Read ~/.scrycli/config.json
+
+# Config structure:
+{
+  "model": {
+    "modelName": "anthropic/claude-3-opus",
+    "modelKey": "your-api-key"
+  },
+  "user": {
+    "token": "jwt-token"
+  }
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="key" href="/guides/authentication">
+    Set up API keys and authentication
+  </Card>
+  <Card title="Code Analysis" icon="magnifying-glass" href="/guides/analyzing-code">
+    Analyze code for errors and improvements
+  </Card>
+</CardGroup>

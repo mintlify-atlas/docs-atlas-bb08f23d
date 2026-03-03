@@ -1,0 +1,244 @@
+---
+title: 'How ScryxCLI Works'
+description: 'Understanding the architecture and core components of ScryxCLI'
+---
+
+ScryxCLI is an AI-powered CLI tool that interprets natural language commands and executes file operations on your codebase. It combines React/Ink for the UI, AI models for language understanding, and a structured tool execution system.
+
+## Architecture Overview
+
+ScryxCLI is built on three core pillars:
+
+1. **React/Ink Terminal UI** - Interactive command-line interface
+2. **AI Integration** - Natural language processing via OpenRouter SDK
+3. **Tool Execution System** - Automated file operations based on AI responses
+
+## React/Ink User Interface
+
+ScryxCLI uses [Ink](https://github.com/vadimdemedes/ink) to build its terminal UI with React components. This enables a rich, interactive CLI experience.
+
+### Application Flow
+
+The main app follows a state-based flow:
+
+```tsx
+const App = () => {
+  const [authed, setAuthed] = useState<boolean>(isAuthenticated());
+  const [modelSelected, setModelSelected] = useState<boolean>(isModelSelected());
+
+  return (
+    <>
+      {!authed && (
+        <Box flexDirection="column" width="100%">
+          <Header />
+          <Welcome />
+          <Auth onAuthenticated={() => setAuthed(true)} />
+        </Box>
+      )}
+
+      {authed && !modelSelected && (
+        <Box flexDirection="column" width="100%">
+          <Header />
+          <Welcome />
+          <SelectModel onDone={() => setModelSelected(true)} />
+        </Box>
+      )}
+
+      {authed && modelSelected && (
+        <Box flexDirection="column" width="100%">
+          <Welcome />
+          <Footer />
+          <InputBox />
+        </Box>
+      )}
+    </>
+  );
+};
+```
+
+<Info>
+The app entry point is a simple Node.js script that renders the React app:
+```tsx
+#!/usr/bin/env node
+import { render } from 'ink';
+import App from '../ui/App.js';
+
+render(<App />);
+```
+</Info>
+
+### Key UI Components
+
+- **Welcome** - Displays the SCRYCLI banner using `ink-big-text`
+- **Auth** - Handles user authentication
+- **SelectModel** - Interactive model selection menu
+- **InputBox** - Main prompt input and response display
+- **AnswerDisplay** - Renders AI responses and tool execution results
+
+## AI Integration
+
+ScryxCLI uses the `useChat` hook to communicate with AI models:
+
+```typescript
+export function useChat() {
+  const [answer, setAnswer] = useState("");
+  const [finalAnswer, setFinalAnswer] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const send = async (prompt: string) => {
+    setAnswer("");
+    setError("");
+    setLoading(true);
+    try {
+      const config = getConfig();
+      const text = await llmCall({
+        prompt,
+        systemPrompt: systemPrompt as string,
+      });
+      setAnswer(text);
+      setFinalAnswer(text);
+    } catch (e: any) {
+      setError(e?.message || "Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { answer, finalAnswer, loading, error, send, setFinalAnswer };
+}
+```
+
+### Context Enhancement
+
+The AI receives enhanced context with the current directory's file tree:
+
+```typescript
+const fileTreeString = getFileTree(process.cwd()).join('\n');
+
+export async function llmCall({ prompt, systemPrompt }: llmCallParams): Promise<string> {
+  const result = openRouterClient.callModel({
+    model: `${getConfig().model.modelName}`,
+    instructions: `${systemPrompt}`,
+    input: `${prompt} \n\nFile Tree: ${fileTreeString}`,
+  });
+  const text = await result.getText();
+  return text;
+}
+```
+
+<Note>
+The file tree is automatically appended to every user prompt, giving the AI full context of the project structure.
+</Note>
+
+## Tool Execution System
+
+The `useToolExecutor` hook parses AI responses and executes file operations:
+
+```typescript
+export function useToolExecutor(answer: string, loading: boolean) {
+  const [result, setResult] = useState("");
+
+  useEffect(() => {
+    if (loading) return;
+    const clean = answer.replace(/|```/g, "").trim();
+    if (!clean.startsWith("{") || !clean.endsWith("}")) return;
+    try {
+      const instruction = JSON.parse(clean);
+      if (!instruction.action) return;
+
+      switch (instruction.action) {
+        case 'create_file':
+          createFile(instruction.file, instruction.content);
+          break;
+        case 'read_file':
+          console.log(readFile(instruction.file));
+          break;
+        case 'write_file':
+          writeFile(instruction.file, instruction.content);
+          break;
+        case 'delete_file':
+          deleteFile(instruction.file);
+          break;
+      }
+    } catch (e: any) {
+      console.error(`Error executing tool: ${e.message}`);
+    }
+  }, [loading, answer]);
+
+  return result;
+}
+```
+
+### System Prompt
+
+The AI is instructed to return structured JSON responses:
+
+<CodeGroup>
+```json Example Response
+{
+  "action": "create_file",
+  "file": "public/game.html",
+  "content": "<!DOCTYPE html><html>...</html>"
+}
+```
+
+```json Update File
+{
+  "action": "update_file",
+  "file": "src/App.jsx",
+  "content": "import React from 'react'; ... modified code ..."
+}
+```
+</CodeGroup>
+
+<Warning>
+The AI must return **only valid JSON** without markdown code blocks or extra text. Output must start with `{` and end with `}`.
+</Warning>
+
+## Configuration Management
+
+ScryxCLI stores configuration in `~/.scrycli/config.json`:
+
+```typescript
+const configPath = path.join(os.homedir(), ".scrycli", "config.json");
+
+export const getConfig = () => {
+  const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+  return config;
+};
+
+export const setConfig = (key: string, value: any) => {
+  const config = getConfig();
+  config[key] = value;
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+};
+```
+
+The config stores:
+- Selected AI model provider and name
+- API keys
+- User authentication state
+
+## Command System
+
+ScryxCLI supports slash commands for special operations:
+
+```typescript
+const handleSubmit = (val: string) => {
+  if (val.startsWith("/")) { 
+    setActiveCmd(val as CommandName); 
+    return; 
+  }
+  send(val);
+};
+```
+
+Available commands include:
+- `/exit` - Exit the application
+- `/logout` - Log out of current session
+- `/report` - Report issues or feedback
+
+<Info>
+Press `ESC` to exit any command and return to the main prompt.
+</Info>

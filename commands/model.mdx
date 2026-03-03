@@ -1,0 +1,122 @@
+---
+title: /model Command
+description: Select AI model provider and model for ScryxCLI
+---
+
+The `/model` command allows you to select which AI model provider and specific model to use for chat interactions.
+
+## Usage
+
+```bash
+/model
+```
+
+## How It Works
+
+<Steps>
+  <Step title="Select Provider">
+    After entering `/model`, you'll see a list of available AI providers:
+    
+    - OpenAI
+    - StepFun
+    - Qwen
+    - ArceeAI
+    - Mistral
+    - Zai
+    
+    Use arrow keys to navigate and press `Enter` to select.
+  </Step>
+  
+  <Step title="Select Model">
+    Once a provider is selected, you'll see the available models for that provider.
+    
+    Models marked with "(Recommended)" are suggested for optimal performance.
+    
+    Use arrow keys to navigate and press `Enter` to select.
+  </Step>
+  
+  <Step title="Configuration Saved">
+    Your selection is automatically saved to `~/.scrycli/config.json` and will be used for all subsequent chat interactions.
+  </Step>
+</Steps>
+
+## Available Models
+
+### OpenAI
+- **gpt-oss-120b** (Recommended) - `openai/gpt-oss-120b:free`
+- **gpt-oss-20b** - `openai/gpt-oss-20b:free`
+
+### ArceeAI
+- **Trinity Large** (Recommended) - `arcee-ai/trinity-large-preview:free`
+- **Trinity Mini** - `arcee-ai/trinity-mini:free`
+
+### Mistral
+- **Mistral Small 3.1 24B** - `mistralai/mistral-small-3.1-24b-instruct:free`
+
+### Qwen
+- **Qwen3 Coder 480B A35B** - `qwen/qwen3-coder:free`
+- **Qwen3 Next 80B A3B Instruct** (Recommended) - `qwen/qwen3-next-80b-a3b-instruct:free`
+
+### StepFun
+- **Step 3.5 Flash** - `stepfun/step-3.5-flash:free`
+
+### Zai
+- **GLM 4.5 Air** - `z-ai/glm-4.5-air:free`
+
+## Navigation
+
+- **Arrow keys**: Navigate between options
+- **Enter**: Select the highlighted option
+- **Esc**: Cancel and return to chat
+
+## Example Flow
+
+```bash
+> /model
+[Esc] to go back
+
+> OpenAI
+  StepFun
+  Qwen
+  ArceeAI
+  Mistral
+  Zai
+```
+
+After selecting OpenAI:
+
+```bash
+> gpt-oss-120b (Recommended)
+  gpt-oss-20b
+```
+
+<Note>
+  All models listed are available on free tier through OpenRouter. The model selection is stored persistently and will be used until changed.
+</Note>
+
+## Configuration Storage
+
+The selected model is saved in your configuration file:
+
+```json
+{
+  "model": {
+    "modelProvider": "openai",
+    "modelName": "openai/gpt-oss-120b:free"
+  }
+}
+```
+
+Location: `~/.scrycli/config.json`
+
+## Checking Current Model
+
+The currently selected model is displayed at the bottom right of the chat interface:
+
+```bash
+Model: openai/gpt-oss-120b:free
+```
+
+<Warning>
+  If no model is selected, you'll see "Model: Not Selected". You must select a model before the chat functionality will work.
+</Warning>

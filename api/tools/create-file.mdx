@@ -1,0 +1,97 @@
+---
+title: 'createFile'
+description: 'Create a new file with automatic directory creation'
+---
+
+## Overview
+
+The `createFile` function creates a new file with the specified content. Unlike `writeFile`, this function automatically creates parent directories if they don't exist.
+
+## Function Signature
+
+```typescript
+createFile(filePath: string, content: string): void
+```
+
+## Parameters
+
+<ParamField path="filePath" type="string" required>
+  The path to the file to create. Can be relative or absolute. Relative paths are resolved from the current working directory.
+</ParamField>
+
+<ParamField path="content" type="string" required>
+  The content to write to the file. The content will be encoded as UTF-8.
+</ParamField>
+
+## Return Value
+
+<ResponseField name="void" type="void">
+  This function does not return a value.
+</ResponseField>
+
+## Implementation Details
+
+The function performs the following steps:
+
+1. Resolves the provided file path to an absolute path using `path.resolve()`
+2. Ensures the parent directory exists by calling the internal `ensureDir()` helper
+3. Creates any missing parent directories recursively using `fs.mkdirSync()` with `{ recursive: true }`
+4. Writes the content to the file synchronously using `fs.writeFileSync()` with UTF-8 encoding
+
+## Usage Example
+
+```typescript
+import { createFile } from './tools/createFile';
+
+// Create a file in a new directory structure
+createFile('./data/users/config.json', '{"admin": true}');
+// This will create both 'data' and 'users' directories if they don't exist
+
+// Create a file with nested path
+createFile('/tmp/logs/2024/app.log', 'Application started');
+
+// Create in existing directory
+createFile('./existing/new-file.txt', 'Hello, World!');
+```
+
+## Error Handling
+
+<Warning>
+  This function will throw an error if:
+  - The file cannot be written due to permissions
+  - The path points to an existing directory
+  - The disk is full
+  - A parent path component is a file instead of a directory
+</Warning>
+
+<Note>
+  If the file already exists, it will be overwritten. This function does not check for existing files before writing.
+</Note>
+
+<Note>
+  This is a synchronous operation and will block the event loop until the file and directories are created. For performance-critical applications, consider using asynchronous file operations.
+</Note>
+
+## Difference from writeFile
+
+The key difference between `createFile` and `writeFile` is:
+
+- **createFile**: Automatically creates parent directories if they don't exist
+- **writeFile**: Requires parent directories to already exist, throws error otherwise
+
+## Source Code
+
+```typescript
+import fs from 'fs';
+import path from 'path';
+
+const ensureDir = (filePath: string) => {
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+};
+
+export const createFile = (filePath: string, content: string) => {
+    const absPath = path.resolve(filePath);
+    ensureDir(absPath);
+    fs.writeFileSync(absPath, content, 'utf-8');
+};
+```

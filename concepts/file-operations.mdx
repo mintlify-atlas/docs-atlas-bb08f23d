@@ -1,0 +1,402 @@
+---
+title: 'File Operations'
+description: 'Understanding ScryxCLI file system tools: read, write, create, delete, and getFileTree'
+---
+
+ScryxCLI provides a comprehensive set of file operation tools that the AI can invoke to modify your codebase. All operations use absolute paths resolved from the current working directory.
+
+## Available Operations
+
+ScryxCLI supports five core file operations:
+
+- **read_file** - Read file contents
+- **write_file** - Overwrite existing file
+- **create_file** - Create new file with directory structure
+- **delete_file** - Remove existing file
+- **getFileTree** - Generate project structure (automatic)
+
+## Read File
+
+Reads the contents of a file and returns it as a UTF-8 string.
+
+### Implementation
+
+```typescript
+import fs from 'fs';
+import path from 'path';
+
+export const readFile = (filePath: string) => {
+  const absPath = path.resolve(filePath);
+  return fs.readFileSync(absPath, 'utf-8');
+};
+```
+
+### Usage
+
+The AI invokes this by returning:
+
+```json
+{
+  "action": "read_file",
+  "file": "src/App.tsx"
+}
+```
+
+<Info>
+File paths are automatically resolved relative to the current working directory where ScryxCLI was launched.
+</Info>
+
+### Behavior
+
+- Resolves relative paths to absolute paths
+- Reads file synchronously
+- Returns full file contents as UTF-8 encoded string
+- Outputs to console via `console.log()`
+
+## Write File
+
+Overwrites an existing file with new content.
+
+### Implementation
+
+```typescript
+import fs from 'fs';
+import path from 'path';
+
+export const writeFile = (filePath: string, content: string) => {
+  const absPath = path.resolve(filePath);
+  fs.writeFileSync(absPath, content, 'utf-8');
+};
+```
+
+### Usage
+
+```json
+{
+  "action": "write_file",
+  "file": "src/components/Button.tsx",
+  "content": "import React from 'react';\n\nconst Button = () => { ... }"
+}
+```
+
+<Warning>
+This operation **overwrites** the entire file. The original content is completely replaced.
+</Warning>
+
+### Behavior
+
+- File must already exist (use `create_file` for new files)
+- Completely replaces existing content
+- Writes UTF-8 encoded text
+- No backup is created automatically
+
+## Create File
+
+Creates a new file and all necessary parent directories.
+
+### Implementation
+
+```typescript
+import fs from 'fs';
+import path from 'path';
+
+const ensureDir = (filePath: string) => {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+};
+
+export const createFile = (filePath: string, content: string) => {
+  const absPath = path.resolve(filePath);
+  ensureDir(absPath);
+  fs.writeFileSync(absPath, content, 'utf-8');
+};
+```
+
+### Usage
+
+```json
+{
+  "action": "create_file",
+  "file": "src/components/new/Feature.tsx",
+  "content": "export const Feature = () => { ... }"
+}
+```
+
+### Behavior
+
+- Creates all parent directories if they don't exist (`{ recursive: true }`)
+- Writes initial content to the new file
+- If file already exists, it will be overwritten (same as `write_file`)
+
+<Info>
+The `ensureDir` helper automatically creates the directory structure `src/components/new/` if it doesn't exist.
+</Info>
+
+## Delete File
+
+Removes a file from the filesystem.
+
+### Implementation
+
+```typescript
+import fs from 'fs';
+import path from 'path';
+
+export const deleteFile = (filePath: string) => {
+  const absPath = path.resolve(filePath);
+  fs.unlinkSync(absPath);
+};
+```
+
+### Usage
+
+```json
+{
+  "action": "delete_file",
+  "file": "src/legacy/OldComponent.tsx"
+}
+```
+
+<Warning>
+File deletion is **permanent**. There is no recovery mechanism or trash bin.
+</Warning>
+
+### Behavior
+
+- Removes file immediately
+- Throws error if file doesn't exist
+- Does not remove empty parent directories
+- Cannot delete directories (files only)
+
+## Get File Tree
+
+Generates a recursive tree structure of the project, automatically included in AI context.
+
+### Implementation
+
+```typescript
+import fs from 'fs';
+import path from 'path';
+
+const IGNORED_DIRS = ['.git', 'node_modules', 'dist', 'build', '.next'];
+
+export const getFileTree = (dir: string, prefix = ''): string[] => {
+  let results: string[] = [];
+  const list = fs.readdirSync(dir);
+
+  list.forEach(file => {
+    if (IGNORED_DIRS.includes(file)) return;
+    const filePath = path.join(dir, file);
+    const stat = fs.statSync(filePath);
+
+    if (stat.isDirectory()) {
+      results.push(prefix + file + '/');
+      results = results.concat(getFileTree(filePath, prefix + '  '));
+    } else {
+      results.push(prefix + file);
+    }
+  });
+
+  return results;
+};
+```
+
+### Ignored Directories
+
+The following directories are automatically excluded:
+
+- `.git` - Git version control
+- `node_modules` - Node.js dependencies
+- `dist` - Build output
+- `build` - Build output
+- `.next` - Next.js build cache
+
+<Info>
+Ignoring these directories keeps the file tree concise and prevents token overflow in AI prompts.
+</Info>
+
+### Output Format
+
+```
+src/
+  components/
+    Button.tsx
+    Input.tsx
+  utils/
+    helpers.ts
+package.json
+tsconfig.json
+```
+
+### Integration
+
+The file tree is automatically appended to every AI prompt:
+
+```typescript
+const fileTreeString = getFileTree(process.cwd()).join('\n');
+
+export async function llmCall({ prompt, systemPrompt }: llmCallParams): Promise<string> {
+  const result = openRouterClient.callModel({
+    model: `${getConfig().model.modelName}`,
+    instructions: `${systemPrompt}`,
+    input: `${prompt} \n\nFile Tree: ${fileTreeString}`,
+  });
+  return await result.getText();
+}
+```
+
+## Tool Execution Flow
+
+The `useToolExecutor` hook orchestrates all file operations:
+
+```typescript
+export function useToolExecutor(answer: string, loading: boolean) {
+  const [result, setResult] = useState("");
+
+  useEffect(() => {
+    if (loading) return;
+    
+    // Clean markdown code blocks from AI response
+    const clean = answer.replace(/|```/g, "").trim();
+    if (!clean.startsWith("{") || !clean.endsWith("}")) return;
+    
+    try {
+      const instruction = JSON.parse(clean);
+      if (!instruction.action) return;
+
+      switch (instruction.action) {
+        case 'create_file':
+          createFile(instruction.file, instruction.content);
+          break;
+        case 'read_file':
+          console.log(readFile(instruction.file));
+          break;
+        case 'write_file':
+          writeFile(instruction.file, instruction.content);
+          break;
+        case 'delete_file':
+          deleteFile(instruction.file);
+          break;
+      }
+    } catch (e: any) {
+      console.error(`Error executing tool: ${e.message}`);
+    }
+  }, [loading, answer]);
+
+  return result;
+}
+```
+
+### Execution Rules
+
+1. **Wait for completion** - Only executes when `loading` is false
+2. **Clean response** - Strips markdown code blocks from AI output
+3. **Validate JSON** - Checks for valid JSON structure (`{...}`)
+4. **Parse action** - Extracts the `action` field
+5. **Execute tool** - Calls appropriate file operation
+6. **Error handling** - Catches and logs any errors
+
+<Note>
+The executor automatically strips markdown code blocks (` ```json ` or ` ``` `) that some models may include in their responses.
+</Note>
+
+## AI Instructions
+
+The AI is instructed via system prompt to return structured JSON:
+
+```
+You are SCRYCLI's AI engine. Your role is to interpret natural language 
+commands from the user and respond with structured JSON instructions.
+
+Rules:
+1. Always return a JSON object with these keys:
+   - "action": one of ["read_file", "write_file", "create_file", "delete_file"]
+   - "file": the relative path of the file to operate on
+   - "content": the full code or text (only for create/write actions)
+
+2. Do NOT return explanations, markdown, or extra text outside the JSON.
+
+3. Use the given project file structure to choose correct file paths.
+
+4. Never execute commands. Only provide JSON instructions.
+```
+
+## Error Handling
+
+Each file operation can throw errors:
+
+<Tabs>
+  <Tab title="Read File">
+    ```typescript
+    // Error: ENOENT - File not found
+    readFile('nonexistent.txt')
+    // throws: Error: ENOENT: no such file or directory
+    ```
+  </Tab>
+  
+  <Tab title="Write File">
+    ```typescript
+    // Error: ENOENT - Directory doesn't exist
+    writeFile('new/dir/file.txt', 'content')
+    // throws: Error: ENOENT: no such file or directory
+    ```
+  </Tab>
+  
+  <Tab title="Create File">
+    ```typescript
+    // Success: Creates all parent directories
+    createFile('new/dir/file.txt', 'content')
+    // Creates 'new/' and 'new/dir/' automatically
+    ```
+  </Tab>
+  
+  <Tab title="Delete File">
+    ```typescript
+    // Error: ENOENT - File doesn't exist
+    deleteFile('missing.txt')
+    // throws: Error: ENOENT: no such file or directory
+    ```
+  </Tab>
+</Tabs>
+
+<Warning>
+All errors are caught and logged to console but do not crash the application. The user sees the error message in the terminal.
+</Warning>
+
+## Best Practices
+
+### For Users
+
+- Always use relative paths from your project root
+- Review AI-generated file operations before confirming
+- Keep backups of important files
+- Use version control (git) to track changes
+
+### For AI Model
+
+- Prefer `create_file` for new files (handles directories)
+- Use `write_file` only for existing files
+- Always include full file content, never partial updates
+- Choose appropriate file names based on project conventions
+
+## Path Resolution
+
+All file operations resolve paths relative to the current working directory:
+
+```typescript
+const InputBox = () => {
+  const cwd = process.cwd();
+  // Display: /Users/username/projects/my-app
+  
+  return (
+    <Box flexDirection="column">
+      <AnswerDisplay loading={loading} error={error} answer={finalAnswer} />
+      <Text color="gray">{cwd}</Text>
+      <PromptInput onSubmit={handleSubmit} />
+    </Box>
+  );
+};
+```
+
+<Info>
+The current working directory is displayed in the UI, helping you understand path resolution context.
+</Info>

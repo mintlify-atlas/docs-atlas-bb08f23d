@@ -1,0 +1,565 @@
+---
+title: 'Hooks System'
+description: 'Complete reference for useChat and useToolExecutor hooks powering ScryxCLI'
+---
+
+## Overview
+
+ScryxCLI uses two primary React hooks to manage AI interactions and file operations:
+
+- **`useChat`**: Handles communication with AI models via OpenRouter
+- **`useToolExecutor`**: Parses AI responses and executes file system operations
+
+These hooks work in tandem to create a seamless natural language → file operation pipeline.
+
+## useChat Hook
+
+**Location**: `src/hooks/useChat.ts`
+
+### Purpose
+
+Manages the complete lifecycle of AI conversations:
+- Sending prompts to the AI model
+- Tracking loading states
+- Handling errors
+- Storing responses
+
+### Full Implementation
+
+```tsx
+import { useState } from "react";
+import { getConfig } from "../config/configManage.js";
+import { llmCall } from "../model/openRouter.js";
+import { systemPrompt } from "../model/systemPrompt.js";
+
+export function useChat() {
+  const [answer, setAnswer] = useState("");
+  const [finalAnswer, setFinalAnswer] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const send = async (prompt: string) => {
+    setAnswer("");
+    setError("");
+    setLoading(true);
+    try {
+      const config = getConfig();
+      const text = await llmCall({
+        prompt,
+        systemPrompt: systemPrompt as string,
+      });
+      setAnswer(text);
+      setFinalAnswer(text);
+    } catch (e: any) {
+      setError(e?.message || "Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { answer, finalAnswer, loading, error, send, setFinalAnswer };
+}
+```
+
+### API Reference
+
+<Accordion title="Return Values">
+
+#### `answer: string`
+The current AI response. Updated as the response is received.
+
+#### `finalAnswer: string`
+The complete, final AI response after processing completes.
+
+#### `loading: boolean`
+Indicates whether an AI request is in progress.
+
+#### `error: string`
+Contains error message if the request fails, empty string otherwise.
+
+#### `send: (prompt: string) => Promise<void>`
+Async function to send a prompt to the AI model.
+
+**Example:**
+```tsx
+const { send } = useChat();
+await send("Create a React component");
+```
+
+#### `setFinalAnswer: (answer: string) => void`
+Manually set the final answer (useful for overriding or clearing responses).
+
+</Accordion>
+
+### Usage Example
+
+```tsx
+import { useChat } from "../hooks/useChat.js";
+
+const MyComponent = () => {
+  const { answer, finalAnswer, loading, error, send } = useChat();
+
+  const handleSubmit = (userInput: string) => {
+    send(userInput);
+  };
+
+  return (
+    <>
+      {loading && <Spinner />}
+      {error && <Text color="red">{error}</Text>}
+      {finalAnswer && <Text color="green">{finalAnswer}</Text>}
+      <Input onSubmit={handleSubmit} />
+    </>
+  );
+};
+```
+
+### State Flow
+
+```
+User submits prompt
+       ↓
+send() called
+       ↓
+loading = true
+answer = ""
+error = ""
+       ↓
+llmCall() executes
+       ↓
+   Success?               Failure?
+       ↓                      ↓
+answer = response      error = message
+finalAnswer = response
+       ↓                      ↓
+loading = false       loading = false
+```
+
+### Integration with OpenRouter
+
+The `send()` function calls `llmCall()` from `src/model/openRouter.ts`:
+
+```tsx
+export async function llmCall({
+  prompt,
+  systemPrompt,
+}: llmCallParams): Promise<string> {
+  const result = openRouterClient.callModel({
+    model: `${getConfig().model.modelName}`,
+    instructions: `${systemPrompt}`,
+    input: `${prompt} \n\nFile Tree: ${fileTreeString}`,
+  });
+  const text = await result.getText();
+  return text;
+}
+```
+
+<Note>
+The AI receives the user's prompt PLUS the current directory's file tree for context-aware responses.
+</Note>
+
+### Error Handling
+
+```tsx
+try {
+  const text = await llmCall({ prompt, systemPrompt });
+  setAnswer(text);
+  setFinalAnswer(text);
+} catch (e: any) {
+  setError(e?.message || "Something went wrong.");
+} finally {
+  setLoading(false); // Always runs
+}
+```
+
+**Common error scenarios:**
+- Network failures
+- Invalid API keys
+- Rate limiting
+- Model unavailability
+
+## useToolExecutor Hook
+
+**Location**: `src/hooks/useToolExecutor.ts`
+
+### Purpose
+
+Parses JSON responses from the AI and executes corresponding file system operations. This hook bridges AI output with actual system actions.
+
+### Full Implementation
+
+```tsx
+import { useEffect, useState } from "react";
+import { writeFile } from "../tools/writeFile.js";
+import { readFile } from "../tools/readFile.js";
+import { createFile } from "../tools/createFile.js";
+import { deleteFile } from "../tools/deleteFile.js";
+
+export function useToolExecutor(answer: string, loading: boolean) {
+  const [result, setResult] = useState("");
+
+  useEffect(() => {
+    if (loading) return;
+    const clean = answer.replace(/|```/g, "").trim();
+    if (!clean.startsWith("{") || !clean.endsWith("}")) return;
+    
+    try {
+      const instruction = JSON.parse(clean);
+      if (!instruction.action) return;
+
+      switch (instruction.action) {
+        case 'create_file':
+          createFile(instruction.file, instruction.content);
+          break;
+        case 'read_file':
+          console.log(readFile(instruction.file));
+          break;
+        case 'write_file':
+          writeFile(instruction.file, instruction.content);
+          break;
+        case 'delete_file':
+          deleteFile(instruction.file);
+          break;
+      }
+    } catch (e: any) {
+      console.error(`Error executing tool: ${e.message}`);
+    }
+  }, [loading, answer]);
+
+  return result;
+}
+```
+
+### API Reference
+
+<Accordion title="Parameters">
+
+#### `answer: string`
+The AI's response text, expected to contain JSON instructions.
+
+#### `loading: boolean`
+Whether the AI request is still in progress. Tool execution is paused while `true`.
+
+</Accordion>
+
+<Accordion title="Return Values">
+
+#### `result: string`
+Currently returns an empty string. Future versions may return execution feedback.
+
+</Accordion>
+
+### Supported Actions
+
+| Action | Parameters | Description |
+|--------|-----------|-------------|
+| `create_file` | `file`, `content` | Creates a new file with specified content |
+| `read_file` | `file` | Reads file content and logs to console |
+| `write_file` | `file`, `content` | Overwrites existing file content |
+| `delete_file` | `file` | Deletes the specified file |
+
+### JSON Response Format
+
+The AI must return responses in this exact format:
+
+```json
+{
+  "action": "create_file",
+  "file": "src/components/Button.tsx",
+  "content": "import React from 'react';\n\nconst Button = () => <button>Click me</button>;\n\nexport default Button;"
+}
+```
+
+### Execution Flow
+
+```
+AI response received
+       ↓
+loading becomes false
+       ↓
+useEffect triggers
+       ↓
+Clean markdown backticks
+       ↓
+Validate JSON structure
+       ↓
+Parse JSON
+       ↓
+Check for 'action' key
+       ↓
+Switch on action type
+       ↓
+Execute corresponding tool
+```
+
+### Usage Example
+
+```tsx
+import { useChat } from "../hooks/useChat.js";
+import { useToolExecutor } from "../hooks/useToolExecutor.js";
+
+const FileManager = () => {
+  const { answer, loading, send } = useChat();
+  const toolResult = useToolExecutor(answer, loading);
+
+  return (
+    <>
+      <Input onSubmit={(val) => send(val)} />
+      {loading && <Text>Processing...</Text>}
+      {toolResult && <Text>Tool executed: {toolResult}</Text>}
+    </>
+  );
+};
+```
+
+### JSON Cleaning Process
+
+```tsx
+const clean = answer.replace(/|```/g, "").trim();
+if (!clean.startsWith("{") || !clean.endsWith("}")) return;
+```
+
+**Why cleaning is necessary:**
+- AI models sometimes wrap JSON in markdown code blocks
+- Example: ` ```json\n{...}\n``` `
+- Cleaning removes backticks and language identifiers
+
+### Error Handling
+
+```tsx
+try {
+  const instruction = JSON.parse(clean);
+  if (!instruction.action) return;
+  
+  switch (instruction.action) {
+    // ... execute tools
+  }
+} catch (e: any) {
+  console.error(`Error executing tool: ${e.message}`);
+}
+```
+
+**Errors are caught for:**
+- Invalid JSON syntax
+- Missing `action` field
+- File operation failures (handled by individual tool functions)
+
+<Note>
+Errors are logged to console but don't crash the application. The UI continues to function normally.
+</Note>
+
+## Hook Integration Pattern
+
+The hooks work together in `InputBox` component:
+
+```tsx
+const InputBox = () => {
+  // 1. Initialize both hooks
+  const { answer, finalAnswer, loading, error, send } = useChat();
+  const toolResult = useToolExecutor(answer, loading);
+
+  // 2. Handle user input
+  const handleSubmit = (val: string) => {
+    send(val); // Triggers useChat
+  };
+
+  // 3. Display results
+  return (
+    <Box flexDirection="column">
+      <AnswerDisplay 
+        loading={loading} 
+        error={error} 
+        answer={toolResult || finalAnswer} // Prioritize tool result
+      />
+      <PromptInput onSubmit={handleSubmit} />
+    </Box>
+  );
+};
+```
+
+### Execution Timeline
+
+```
+0ms    User submits "Create a button component"
+       ↓
+1ms    useChat.send() called
+       loading = true
+       ↓
+2ms    llmCall() sends request to OpenRouter
+       ↓
+1500ms AI responds with JSON
+       answer = "{\"action\": \"create_file\", ...}"
+       loading = false
+       ↓
+1501ms useToolExecutor useEffect triggers
+       JSON parsed
+       createFile() executed
+       ↓
+1502ms File created on disk
+       User sees success message
+```
+
+## Best Practices
+
+### When Using useChat
+
+1. **Always check loading state** before showing results
+```tsx
+{loading && <Spinner />}
+{!loading && answer && <Text>{answer}</Text>}
+```
+
+2. **Handle errors gracefully**
+```tsx
+{error && <Text color="red">Error: {error}</Text>}
+```
+
+3. **Clear previous state** before new requests
+```tsx
+const handleNewRequest = (input: string) => {
+  setFinalAnswer(""); // Clear previous response
+  send(input);
+};
+```
+
+### When Using useToolExecutor
+
+1. **Pass loading state correctly**
+```tsx
+const toolResult = useToolExecutor(answer, loading);
+// Tool won't execute until loading = false
+```
+
+2. **Validate JSON on the AI side** using system prompts
+```tsx
+// Ensure AI returns valid JSON (see systemPrompt.ts)
+```
+
+3. **Monitor console for errors**
+```bash
+# Tool execution errors appear here
+console.error(`Error executing tool: ${e.message}`);
+```
+
+## Performance Considerations
+
+### useChat
+- Each `send()` call triggers a network request
+- Avoid calling `send()` in rapid succession
+- Consider debouncing user input for auto-complete scenarios
+
+### useToolExecutor
+- Runs on every `answer` or `loading` change
+- Early returns prevent unnecessary processing
+- File operations are synchronous (blocking)
+
+## Extending the Hooks
+
+### Adding Streaming Support to useChat
+
+```tsx
+const send = async (prompt: string) => {
+  setAnswer("");
+  setLoading(true);
+  
+  try {
+    const stream = await llmCallStream({ prompt, systemPrompt });
+    
+    for await (const chunk of stream) {
+      setAnswer(prev => prev + chunk); // Update incrementally
+    }
+    
+    setFinalAnswer(answer);
+  } catch (e: any) {
+    setError(e?.message);
+  } finally {
+    setLoading(false);
+  }
+};
+```
+
+### Adding New Tool Actions
+
+```tsx
+switch (instruction.action) {
+  case 'create_file':
+    createFile(instruction.file, instruction.content);
+    break;
+  
+  // New action: rename_file
+  case 'rename_file':
+    renameFile(instruction.oldPath, instruction.newPath);
+    break;
+  
+  // New action: list_files
+  case 'list_files':
+    const files = listFiles(instruction.directory);
+    setResult(files.join('\n'));
+    break;
+}
+```
+
+## Troubleshooting
+
+<Accordion title="AI response not executing">
+**Symptoms**: AI responds but no file operation occurs
+
+**Checklist**:
+1. Check if response is valid JSON
+2. Verify `action` field exists
+3. Look for errors in console
+4. Ensure `loading` is `false` when response arrives
+
+**Debug**:
+```tsx
+useEffect(() => {
+  console.log('Answer:', answer);
+  console.log('Loading:', loading);
+  const clean = answer.replace(/|```/g, "").trim();
+  console.log('Cleaned:', clean);
+}, [answer, loading]);
+```
+</Accordion>
+
+<Accordion title="Duplicate tool executions">
+**Symptoms**: File created multiple times
+
+**Cause**: useEffect dependencies triggering multiple times
+
+**Solution**: Add dependency check
+```tsx
+const prevAnswerRef = useRef('');
+
+useEffect(() => {
+  if (loading || answer === prevAnswerRef.current) return;
+  prevAnswerRef.current = answer;
+  
+  // ... rest of logic
+}, [loading, answer]);
+```
+</Accordion>
+
+<Accordion title="Error: 'Something went wrong'">
+**Symptoms**: Generic error message
+
+**Cause**: Network issue or API key problem
+
+**Debug**:
+```tsx
+catch (e: any) {
+  console.error('Full error:', e); // Log complete error object
+  setError(e?.message || "Something went wrong.");
+}
+```
+
+Check:
+- Network connectivity
+- OpenRouter API key validity
+- Selected model availability
+</Accordion>
+
+## Related Documentation
+
+- [System Architecture](/advanced/architecture) - How hooks fit into overall design
+- [Tools System](/advanced/tools-system) - File operation implementations
+- [System Prompt](/advanced/tools-system#system-prompt-structure) - AI instruction format

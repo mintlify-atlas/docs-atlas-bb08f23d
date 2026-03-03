@@ -1,0 +1,101 @@
+---
+title: 'setConfig()'
+description: 'Set a configuration value in the ScryxCLI configuration'
+---
+
+## Function Signature
+
+```typescript
+export const setConfig = (key: string, value: any) => void
+```
+
+## Description
+
+Sets a configuration value for the specified key in the ScryxCLI configuration file. This function updates the configuration object and persists the changes to `~/.scrycli/config.json`. The configuration is written with pretty-printing (2-space indentation) for readability.
+
+## Parameters
+
+<ParamField path="key" type="string" required>
+  The configuration key to set. This will be used as the property name in the configuration object.
+</ParamField>
+
+<ParamField path="value" type="any" required>
+  The value to associate with the key. Can be any JSON-serializable value including strings, numbers, booleans, objects, or arrays.
+</ParamField>
+
+## Usage
+
+```typescript
+import { setConfig } from '@scryxcli/config';
+
+setConfig('apiKey', 'abc123xyz');
+setConfig('theme', 'dark');
+setConfig('verbose', true);
+```
+
+## Examples
+
+### Set String Configuration
+
+```typescript
+setConfig('apiKey', 'sk-1234567890abcdef');
+setConfig('defaultRegion', 'us-west-2');
+```
+
+### Set Boolean Configuration
+
+```typescript
+setConfig('verbose', true);
+setConfig('autoUpdate', false);
+```
+
+### Set Number Configuration
+
+```typescript
+setConfig('timeout', 5000);
+setConfig('maxRetries', 3);
+```
+
+### Set Object Configuration
+
+```typescript
+setConfig('database', {
+  host: 'localhost',
+  port: 5432,
+  name: 'mydb'
+});
+```
+
+### Set Array Configuration
+
+```typescript
+setConfig('allowedHosts', ['api.example.com', 'staging.example.com']);
+setConfig('plugins', ['plugin-a', 'plugin-b', 'plugin-c']);
+```
+
+### Update Existing Configuration
+
+```typescript
+import { getConfig, setConfig } from '@scryxcli/config';
+
+// Get current value
+const config = getConfig();
+const currentTheme = config.theme || 'light';
+
+// Update to new value
+const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+setConfig('theme', newTheme);
+```
+
+## Error Conditions
+
+- If the configuration file cannot be written, a filesystem error will be thrown
+- If the value cannot be serialized to JSON (e.g., circular references), a `TypeError` will be thrown
+- If the configuration directory cannot be accessed, a filesystem error will be thrown
+
+## Notes
+
+- Overwrites the value if the key already exists
+- The configuration file is formatted with 2-space indentation for readability
+- This function performs synchronous file I/O operations
+- All values must be JSON-serializable (functions, symbols, and undefined values will be omitted or cause errors)

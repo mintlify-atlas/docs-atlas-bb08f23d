@@ -1,0 +1,102 @@
+---
+title: 'deleteFile'
+description: 'Delete a file synchronously'
+---
+
+## Overview
+
+The `deleteFile` function removes a file from the file system synchronously.
+
+## Function Signature
+
+```typescript
+deleteFile(filePath: string): void
+```
+
+## Parameters
+
+<ParamField path="filePath" type="string" required>
+  The path to the file to delete. Can be relative or absolute. Relative paths are resolved from the current working directory.
+</ParamField>
+
+## Return Value
+
+<ResponseField name="void" type="void">
+  This function does not return a value.
+</ResponseField>
+
+## Implementation Details
+
+The function performs the following steps:
+
+1. Resolves the provided file path to an absolute path using `path.resolve()`
+2. Deletes the file synchronously using `fs.unlinkSync()`
+3. The file is permanently removed from the file system
+
+## Usage Example
+
+```typescript
+import { deleteFile } from './tools/deleteFile';
+
+// Delete a temporary file
+deleteFile('./tmp/cache.json');
+
+// Delete with absolute path
+deleteFile('/var/log/old-logs.txt');
+
+// Delete after processing
+const data = readFile('./input.txt');
+processData(data);
+deleteFile('./input.txt');
+```
+
+## Error Handling
+
+<Warning>
+  This function will throw an error if:
+  - The file does not exist
+  - The file cannot be deleted due to permissions
+  - The path points to a directory (use `fs.rmdirSync()` or `fs.rmSync()` for directories)
+  - The file is currently in use or locked by another process
+</Warning>
+
+<Warning>
+  **This operation is irreversible.** Deleted files cannot be recovered. Always verify the file path before deletion, especially when working with user-provided paths.
+</Warning>
+
+<Note>
+  This is a synchronous operation and will block the event loop until the file is deleted. For performance-critical applications, consider using asynchronous file operations.
+</Note>
+
+## Best Practices
+
+```typescript
+import { deleteFile } from './tools/deleteFile';
+import { readFile } from './tools/readFile';
+import fs from 'fs';
+
+// Check if file exists before deleting
+if (fs.existsSync('./temp.txt')) {
+  deleteFile('./temp.txt');
+}
+
+// Delete files safely with try-catch
+try {
+  deleteFile('./output.json');
+  console.log('File deleted successfully');
+} catch (error) {
+  console.error('Failed to delete file:', error.message);
+}
+```
+
+## Source Code
+
+```typescript
+import fs from 'fs';
+import path from 'path';
+
+export const deleteFile = (filePath: string) => {
+    const absPath = path.resolve(filePath);
+    fs.unlinkSync(absPath);
+};
+```

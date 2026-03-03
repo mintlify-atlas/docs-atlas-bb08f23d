@@ -1,0 +1,79 @@
+---
+title: /apikey Command
+description: Configure API key for ScryxCLI
+---
+
+The `/apikey` command allows you to set or update your API key configuration for ScryxCLI.
+
+## Usage
+
+```bash
+/apikey
+```
+
+## Overview
+
+The API key command provides an interface for managing authentication credentials needed to access AI model providers.
+
+## How It Works
+
+When you enter `/apikey`, the command opens the model selection interface, which is used for configuring API access.
+
+<Steps>
+  <Step title="Enter the command">
+    Type `/apikey` in the chat prompt and press `Enter`.
+  </Step>
+  
+  <Step title="Configure settings">
+    Follow the prompts to configure your API key and related settings.
+  </Step>
+  
+  <Step title="Save configuration">
+    Your settings are saved to `~/.scrycli/config.json`.
+  </Step>
+</Steps>
+
+## Navigation
+
+- **Arrow keys**: Navigate between options
+- **Enter**: Confirm selection
+- **Esc**: Cancel and return to chat
+
+## Configuration Storage
+
+API configuration is stored in:
+
+```
+~/.scrycli/config.json
+```
+
+This file is automatically created in your home directory when you first run ScryxCLI.
+
+## Security
+
+<Warning>
+  API keys are stored locally on your machine. Ensure your configuration file has appropriate permissions and is not shared publicly.
+</Warning>
+
+## Example Flow
+
+```bash
+> /apikey
+[Esc] to go back
+
+# Configuration interface appears
+```
+
+## Related Commands
+
+- [/model](/commands/model) - Select AI model to use
+- [/logout](/commands/logout) - Clear all configuration including API keys
+
+## Troubleshooting
+
+If you encounter authentication errors:
+
+1. Verify your API key is correct
+2. Check that the configuration file exists at `~/.scrycli/config.json`
+3. Ensure the API key has necessary permissions
+4. Try re-entering the API key using `/apikey`

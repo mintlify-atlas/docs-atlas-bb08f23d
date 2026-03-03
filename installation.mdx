@@ -1,0 +1,212 @@
+---
+title: Installation
+description: Install ScryxCLI and set up your development environment
+---
+
+# Installing ScryxCLI
+
+Get ScryxCLI up and running on your system in just a few minutes.
+
+## Prerequisites
+
+Before installing ScryxCLI, ensure you have the following installed:
+
+- **Node.js** version 16 or higher
+- **npm**, **yarn**, or **pnpm** package manager
+- A terminal application (Terminal, iTerm2, Windows Terminal, etc.)
+
+<Note>
+  ScryxCLI works on macOS, Linux, and Windows. Make sure your Node.js installation is up to date for the best experience.
+</Note>
+
+## Install ScryxCLI
+
+You can install ScryxCLI globally or as a local dependency in your project.
+
+### Global installation (recommended)
+
+Installing globally allows you to use the `scrycli` command from anywhere on your system:
+
+<CodeGroup>
+```bash npm
+npm install -g scrycli
+```
+
+```bash yarn
+yarn global add scrycli
+```
+
+```bash pnpm
+pnpm add -g scrycli
+```
+</CodeGroup>
+
+### Local installation
+
+If you prefer to install ScryxCLI in a specific project:
+
+<CodeGroup>
+```bash npm
+npm install scrycli
+```
+
+```bash yarn
+yarn add scrycli
+```
+
+```bash pnpm
+pnpm add scrycli
+```
+</CodeGroup>
+
+<Info>
+  With a local installation, you'll need to run ScryxCLI using `npx scrycli` or add it to your package.json scripts.
+</Info>
+
+## Verify installation
+
+After installation, verify that ScryxCLI is installed correctly:
+
+```bash
+scrycli
+```
+
+You should see the ScryxCLI welcome screen with the large "SCRYCLI" banner:
+
+```
+ ███████  ██████ ██████  ██    ██  ██████ ██      ██ 
+ ██      ██      ██   ██  ██  ██  ██      ██      ██ 
+ ███████ ██      ██████    ████   ██      ██      ██ 
+      ██ ██      ██   ██    ██    ██      ██      ██ 
+ ███████  ██████ ██   ██    ██     ██████ ███████ ██ 
+```
+
+## First-time setup
+
+When you run ScryxCLI for the first time, you'll be guided through a setup process:
+
+<Steps>
+  <Step title="Authentication">
+    Press `Enter` when prompted to sign in. This will open your browser to https://www.scrycli.tech/token.
+    
+    ```
+    🔐 Press [Enter] to Signin to your account
+    ```
+  </Step>
+  
+  <Step title="Get your token">
+    After signing in on the website, copy your authentication token.
+    
+    ```
+    🌐 Browser opened at https://www.scrycli.tech/token
+    📥 Paste your token here and press [Enter]:
+    ```
+  </Step>
+  
+  <Step title="Paste token">
+    Return to your terminal and paste the token when prompted, then press `Enter`.
+    
+    ```
+    > [paste your token here]
+    ```
+  </Step>
+  
+  <Step title="Select AI provider">
+    Choose your preferred AI provider from the list:
+    
+    - OpenAI
+    - StepFun
+    - Qwen
+    - ArceeAI
+    - Mistral
+    - Zai
+  </Step>
+  
+  <Step title="Select model">
+    Pick a specific model from your chosen provider. Recommended options are marked in the list.
+  </Step>
+</Steps>
+
+<Warning>
+  Keep your authentication token secure. Never share it or commit it to version control. ScryxCLI stores it in `~/.scrycli/config.json` on your system.
+</Warning>
+
+## Configuration file
+
+ScryxCLI stores its configuration in your home directory:
+
+```
+~/.scrycli/config.json
+```
+
+The configuration file contains:
+
+- Your authentication token and user ID
+- Selected AI model provider and model name
+- Other preferences
+
+<Info>
+  You can manually edit this file to change settings, or use the built-in `/model` and `/logout` commands.
+</Info>
+
+## Updating ScryxCLI
+
+To update to the latest version of ScryxCLI:
+
+<CodeGroup>
+```bash npm
+npm update -g scrycli
+```
+
+```bash yarn
+yarn global upgrade scrycli
+```
+
+```bash pnpm
+pnpm update -g scrycli
+```
+</CodeGroup>
+
+## Troubleshooting
+
+### Command not found
+
+If you get a "command not found" error after global installation:
+
+1. Check that your npm global bin directory is in your PATH:
+   ```bash
+   npm config get prefix
+   ```
+
+2. Add the bin directory to your PATH in your shell configuration file (.bashrc, .zshrc, etc.):
+   ```bash
+   export PATH="$(npm config get prefix)/bin:$PATH"
+   ```
+
+### Permission errors
+
+If you encounter permission errors during installation on macOS or Linux:
+
+```bash
+sudo npm install -g scrycli
+```
+
+Or configure npm to install global packages in your home directory:
+
+```bash
+mkdir ~/.npm-global
+npm config set prefix '~/.npm-global'
+export PATH=~/.npm-global/bin:$PATH
+```
+
+### Token verification failed
+
+If you receive an "Invalid token" error:
+
+- Ensure you copied the complete token from the website
+- Check that there are no extra spaces or line breaks
+- Try generating a new token from https://www.scrycli.tech/token
+
+## What's next?
+
+Now that ScryxCLI is installed, head over to the [quickstart guide](/quickstart) to learn how to use it with real examples.
