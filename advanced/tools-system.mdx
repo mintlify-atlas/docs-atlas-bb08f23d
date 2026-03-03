@@ -276,10 +276,12 @@ You must return only valid JSON. Do not include backticks, markdown, or extra te
 }
 
 {
-  "action": "update_file",
+  "action": "write_file",
   "file": "src/App.jsx",
   "content": "import React from 'react'; ... modified code ..."
 }
+
+Note: The system prompt mentions "update_file" but it's processed as "write_file".
 
 `;
 ```

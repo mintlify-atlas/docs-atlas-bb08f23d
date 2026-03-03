@@ -13,7 +13,10 @@ ScryxCLI supports five core file operations:
 - **write_file**: Overwrite an existing file
 - **create_file**: Create a new file with content
 - **delete_file**: Remove a file from the filesystem
-- **update_file**: Modify existing file content
+
+<Info>
+  While the AI's system prompt mentions an `update_file` action, it is processed the same as `write_file` by the tool executor - both overwrite the entire file content.
+</Info>
 
 All operations use absolute paths resolved from your current working directory.
 
@@ -171,7 +174,7 @@ export const writeFile = (filePath: string, content: string) => {
 
 ## Updating Files
 
-Modify existing files while preserving context:
+Modify existing files with new content:
 
 ```bash
 > Update src/lib/auth.ts to add support for refresh tokens
@@ -180,12 +183,15 @@ Modify existing files while preserving context:
 AI Response:
 ```json
 {
-  "action": "update_file",
+  "action": "write_file",
   "file": "src/lib/auth.ts",
-  "content": "// Complete updated file content",
-  "changes": "Added refreshToken function and token expiry checking"
+  "content": "// Complete updated file content"
 }
 ```
+
+<Note>
+  The AI may respond with `update_file` in the action field, but ScryxCLI processes it the same as `write_file` - the entire file is overwritten with the new content.
+</Note>
 
 ### Update Examples
 

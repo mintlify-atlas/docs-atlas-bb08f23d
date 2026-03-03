@@ -20,20 +20,13 @@ The AI engine uses your project's file tree and existing code patterns to genera
 
 <Steps>
   <Step title="Identify the Error">
-    First, analyze your code to find issues:
+    First, ask the AI about your code to find issues:
 
     ```bash
     > Check src/hooks/useToolExecutor.ts for error handling issues
     ```
 
-    The AI might identify:
-    ```json
-    {
-      "action": "explain_code",
-      "file": "src/hooks/useToolExecutor.ts",
-      "issue": "Missing try-catch for JSON.parse on line 16"
-    }
-    ```
+    The AI will provide a conversational response identifying potential issues, such as missing error handling around JSON.parse.
   </Step>
 
   <Step title="Request AI Fix">
@@ -51,11 +44,11 @@ The AI engine uses your project's file tree and existing code patterns to genera
   </Step>
 
   <Step title="Review the Fix">
-    ScryxCLI will generate an update action:
+    ScryxCLI will generate a write action:
 
     ```json
     {
-      "action": "update_file",
+      "action": "write_file",
       "file": "src/hooks/useToolExecutor.ts",
       "content": "// Full updated file content with fix applied"
     }
@@ -77,9 +70,9 @@ The AI engine uses your project's file tree and existing code patterns to genera
 
 ScryxCLI supports multiple file modification actions:
 
-### Update Existing File
+### Write/Modify Existing File
 
-The `update_file` action modifies an existing file:
+The `write_file` action modifies an existing file:
 
 ```bash
 > Fix the authentication bug in src/lib/auth.ts
@@ -88,32 +81,14 @@ The `update_file` action modifies an existing file:
 Response:
 ```json
 {
-  "action": "update_file",
-  "file": "src/lib/auth.ts",
-  "content": "import { getConfig } from '../config/configManage.js';\n// Updated code with fix...",
-  "changes": "Added null check before JWT verification"
-}
-```
-
-### Write File
-
-The `write_file` action overwrites a file completely:
-
-```bash
-> Rewrite src/model/systemPrompt.ts with improved instructions
-```
-
-Response:
-```json
-{
   "action": "write_file",
-  "file": "src/model/systemPrompt.ts",
-  "content": "export const systemPrompt = `Updated prompt...`;"
+  "file": "src/lib/auth.ts",
+  "content": "import { getConfig } from '../config/configManage.js';\n// Updated code with fix..."
 }
 ```
 
 <Note>
-  Both `update_file` and `write_file` will overwrite the entire file content. The AI includes the full file content in the response, not just the changed lines.
+  The `write_file` action overwrites the entire file content. The AI includes the full file content in the response, not just the changed lines. While the AI's system prompt mentions `update_file`, it is processed the same as `write_file` by the tool executor.
 </Note>
 
 ## Common Fix Patterns
@@ -210,19 +185,17 @@ ScryxCLI returns fixes as JSON instructions that the tool executor automatically
 
 ```json
 {
-  "action": "update_file",
+  "action": "write_file",
   "file": "src/hooks/useToolExecutor.ts",
-  "content": "import { useEffect, useState } from 'react';\n// Full file content...",
-  "changes": "Added error boundary around JSON.parse"
+  "content": "import { useEffect, useState } from 'react';\n// Full file content..."
 }
 ```
 
 ### Response Fields
 
-- **action**: The operation type (`update_file`, `write_file`, `create_file`)
+- **action**: The operation type (`write_file`, `create_file`, `read_file`, `delete_file`)
 - **file**: Relative path to the file
-- **content**: Complete new file content
-- **changes**: Optional description of what was modified
+- **content**: Complete new file content (for write/create actions)
 
 ### Automatic Execution
 

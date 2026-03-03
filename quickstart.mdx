@@ -111,7 +111,7 @@ Response:
 }
 ```
 
-### Update a file
+### Write/modify a file
 
 ```
 Update App.jsx to include error boundary
@@ -120,11 +120,15 @@ Update App.jsx to include error boundary
 Response:
 ```json
 {
-  "action": "update_file",
+  "action": "write_file",
   "file": "src/App.jsx",
   "content": "import React from 'react';\nimport ErrorBoundary from './ErrorBoundary';\n\nfunction App() {\n  return (\n    <ErrorBoundary>\n      <div className=\"App\">\n        {/* Your app content */}\n      </div>\n    </ErrorBoundary>\n  );\n}\n\nexport default App;"
 }
 ```
+
+<Info>
+  The AI may respond with `update_file` in the action field (as mentioned in the system prompt), but ScryxCLI processes it the same as `write_file` - it overwrites the entire file content.
+</Info>
 
 ### Delete a file
 
